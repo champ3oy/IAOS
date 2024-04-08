@@ -1,0 +1,58 @@
+package incidents
+
+import (
+	"issue-reporting/users"
+	"time"
+)
+
+// Incident represents an incident reported in the system
+type Incident struct {
+	Id             string       `json:"id"`
+	Title          string       `json:"title"`
+	Description    string       `json:"description"`
+	Severity       Severity     `json:"severity"`
+	Status         Status       `json:"status"`
+	AssignedTo     []users.User `json:"assigned_to"`
+	CreatedAt      time.Time    `json:"created_at"`
+	TeamId         string       `json:"teamId"`
+	UpdatedAt      time.Time    `json:"updated_at"`
+	Resolved       bool         `json:"resolved"`
+	ResolvedAt     time.Time    `json:"resolved_at"`
+	Acknowledged   bool         `json:"acknowledged"`
+	AcknowledgedAt time.Time    `json:"acknowledged_at"`
+	Actions        []string     `json:"actions"`
+	FollowUps      []string     `json:"followUps"`
+	Timeline       []Timepoint  `json:"timeline"`
+	Metadata       string       `json:"metadat"`
+}
+
+type Incidents struct {
+	Incidents []Incident `json:"incidents"`
+}
+
+type Timepoint struct {
+	Title     string
+	CreatedAt time.Time
+	Metadata  string
+}
+
+// Severity represents the severity level of an incident
+type Severity string
+
+const (
+	SeverityLow    Severity = "Low"
+	SeverityMedium Severity = "Medium"
+	SeverityHigh   Severity = "High"
+)
+
+// Status represents the current status of an incident
+type Status string
+
+const (
+	StatusOpen   Status = "Open"
+	StatusClosed Status = "Closed"
+)
+
+type AssignParams struct {
+	User users.User
+}

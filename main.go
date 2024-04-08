@@ -1,0 +1,52 @@
+package main
+
+import (
+	"issue-reporting/auth"
+	"issue-reporting/cron"
+	"issue-reporting/database"
+	"issue-reporting/incidents"
+	"issue-reporting/schedules"
+	"issue-reporting/users"
+	"log"
+
+	_ "issue-reporting/docs"
+
+	swagger "github.com/gofiber/contrib/swagger"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+)
+
+func main() {
+	if err := database.Connect(); err != nil {
+		log.Fatal(err)
+	}
+
+	app := fiber.New()
+	app.Use(recover.New())
+	app.Use(cors.New())
+	app.Use(logger.New(logger.Config{
+		Format:     "${cyan}[${time}] ${red}[${ip}] ${magenta}${bytesSent}bytes ${green}${latency} ${blue}${method} ${white}${path}\n",
+		TimeFormat: "02-Jan-2006",
+		TimeZone:   "UTC",
+	}))
+
+	swaggerCfg := swagger.Config{
+		BasePath: "/docs", //swagger ui base path
+		FilePath: "./docs/swagger.json",
+	}
+
+	app.Use(swagger.New(swaggerCfg))
+
+	// Register routes from different modules
+	auth.RegisterAuthRoutes(app)
+	incidents.RegisterRoutes(app)
+	users.RegisterRoutes(app)
+	schedules.RegisterRoutes(app)
+
+	cron.StartNotifyAssignScheduler()
+	cron.StartNotifyAcknowlegedScheduler()
+
+	app.Listen(":3000")
+}
