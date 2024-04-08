@@ -9,13 +9,11 @@ import (
 
 var secretKey = []byte("your-secret-key")
 
-// Claims represents the JWT claims
 type Claims struct {
 	Email string `json:"email"`
 	jwt.StandardClaims
 }
 
-// GenerateToken generates a new JWT token
 func GenerateToken(email string) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
@@ -28,7 +26,6 @@ func GenerateToken(email string) (string, error) {
 	return token.SignedString(secretKey)
 }
 
-// VerifyToken verifies the JWT token
 func VerifyToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil

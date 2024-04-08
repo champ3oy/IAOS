@@ -4,7 +4,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// AuthMiddleware is a middleware function to authenticate users
 func AuthMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		token := c.Get("Authorization")

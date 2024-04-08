@@ -16,9 +16,11 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	godotenv.Load()
 	if err := database.Connect(); err != nil {
 		log.Fatal(err)
 	}
@@ -48,5 +50,5 @@ func main() {
 	cron.StartNotifyAssignScheduler()
 	cron.StartNotifyAcknowlegedScheduler()
 
-	app.Listen(":3000")
+	app.Listen(":80")
 }

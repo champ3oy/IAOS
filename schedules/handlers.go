@@ -20,7 +20,6 @@ func CreateSchedules(c *fiber.Ctx) error {
 		TimeRange TimeRange
 	}
 	if err := c.BodyParser(&body); err != nil {
-		// Handle parsing error
 		return err
 	}
 	userCode := c.Params("userCode")
@@ -40,7 +39,6 @@ func CreateSchedules(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check for existing schedules within the specified time range
 	existingSchedule, err := ScheduledAt(body.TimeRange.Start.Format(time.RFC3339), body.TimeRange.End.Format(time.RFC3339))
 	if err != nil {
 		return err
@@ -90,7 +88,6 @@ func ScheduledAt(startTimestamp, endTimestamp string) (*Schedule, error) {
 		return nil, errors.New("end timestamp is not in a valid format")
 	}
 
-	// Check if there's any schedule overlapping with the specified time range
 	overlappingFilter := bson.M{
 		"$or": []bson.M{
 			bson.M{"time.start": bson.M{"$lt": endTime}, "time.end": bson.M{"$gt": startTime}},
@@ -123,11 +120,10 @@ func SchedulesWithinRange(startTimestamp, endTimestamp string) ([]Schedule, erro
 		return nil, errors.New("end timestamp is not in a valid format")
 	}
 
-	// Filter to find schedules within the specified time range
 	withinRangeFilter := bson.M{
 		"$and": []bson.M{
-			bson.M{"time.start": bson.M{"$gte": startTime}}, // Start time is greater than or equal to the specified start time
-			bson.M{"time.end": bson.M{"$lte": endTime}},     // End time is less than or equal to the specified end time
+			bson.M{"time.start": bson.M{"$gte": startTime}},
+			bson.M{"time.end": bson.M{"$lte": endTime}},
 		},
 	}
 
@@ -221,7 +217,6 @@ func ListByTimeRange(c *fiber.Ctx) error {
 		TimeRange TimeRange
 	}
 	if err := c.BodyParser(&body); err != nil {
-		// Handle parsing error
 		return err
 	}
 
@@ -301,7 +296,6 @@ func UpdateSchedules(c *fiber.Ctx) error {
 		return err
 	}
 
-	// Return the updated schedule as response
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message":  "schedule data updated",
 		"schedule": &schedule,

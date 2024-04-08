@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// RegisterRoutes registers incident-related routes with the Fiber app
 func RegisterRoutes(app *fiber.App) {
 	users := app.Group("/schedules").Use(middleware.AuthMiddleware())
 	users.Get("/now", GetScheduledNow)

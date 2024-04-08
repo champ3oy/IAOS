@@ -13,7 +13,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// RegisterAuthRoutes registers authentication routes
 func RegisterAuthRoutes(app *fiber.App) {
 	authRoutes := app.Group("/auth")
 
@@ -22,14 +21,12 @@ func RegisterAuthRoutes(app *fiber.App) {
 	authRoutes.Post("/refresh", Refresh).Use(middleware.AuthMiddleware())
 }
 
-// Register handles user registration
 func Register(c *fiber.Ctx) error {
 	var team Teams
 	if err := c.BodyParser(&team); err != nil {
 		return err
 	}
 
-	// Check if email already exists
 	var existingTeam Teams
 	err := database.FindOne("teams", bson.M{"email": team.Email}).Decode(&existingTeam)
 	if err != nil && err != mongo.ErrNoDocuments {
@@ -51,7 +48,6 @@ func Register(c *fiber.Ctx) error {
 		})
 	}
 
-	// Hash the team's password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(team.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -79,7 +75,6 @@ func Register(c *fiber.Ctx) error {
 	})
 }
 
-// Login handles user login
 func Login(c *fiber.Ctx) error {
 	var credentials struct {
 		Email    string `json:"email"`
@@ -95,12 +90,10 @@ func Login(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
-	// Compare hashed password with the provided password
 	if err := bcrypt.CompareHashAndPassword([]byte(foundDoc.Password), []byte(credentials.Password)); err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
-	// Validate credentials and generate JWT token
 	token, err := middleware.GenerateToken(credentials.Email)
 	if err != nil {
 		return err
@@ -113,10 +106,8 @@ func Login(c *fiber.Ctx) error {
 
 }
 
-// Refresh handles token refresh
 func Refresh(c *fiber.Ctx) error {
 	email := c.Locals("email").(string)
-	// Generate a new token with the same username
 	token, err := middleware.GenerateToken(email)
 	if err != nil {
 		return err

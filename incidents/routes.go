@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// RegisterRoutes registers incident-related routes with the Fiber app
 func RegisterRoutes(app *fiber.App) {
 	incidents := app.Group("/incidents").Use(middleware.AuthMiddleware())
 	incidents.Post("/", CreateIncident)

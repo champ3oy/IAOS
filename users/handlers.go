@@ -24,7 +24,6 @@ func CreateUser(c *fiber.Ctx) error {
 
 	var user User
 	if err := c.BodyParser(&user); err != nil {
-		// Handle parsing error
 		log.Println(err)
 		return err
 	}
@@ -41,7 +40,6 @@ func CreateUser(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "email is empty")
 	}
 
-	// Check if email already exists
 	var existingUser User
 	err = database.FindOne("users", bson.M{"email": user.Email}).Decode(&existingUser)
 	if err != nil && err != mongo.ErrNoDocuments {
@@ -132,32 +130,25 @@ func GetUsers(c *fiber.Ctx) error {
 }
 
 func UpdateUser(c *fiber.Ctx) error {
-	// Parse the incoming request body to extract the fields to update
 	var userUpdate map[string]interface{}
 	if err := c.BodyParser(&userUpdate); err != nil {
 		log.Println(err)
 		return err
 	}
 
-	// Get the user code from the request parameters
 	userCode := c.Params("userCode")
 
-	// Build the filter to find the user by their code
 	filter := bson.M{"code": userCode}
 
-	// Initialize the update operation
 	var update bson.M
 	if len(userUpdate) > 0 {
 		delete(userUpdate, "team")
 		delete(userUpdate, "code")
-		// If there are fields in the update request, set them using $set
 		update = bson.M{"$set": userUpdate}
 	} else {
-		// If no fields provided, return an error or handle it as needed
 		return fiber.NewError(fiber.StatusBadRequest, "No fields provided for update")
 	}
 
-	// Perform the update operation
 	var user User
 	err := database.FindOneAndUpdate("users", filter, update).Decode(&user)
 	if err != nil {
@@ -165,7 +156,6 @@ func UpdateUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	// Return the updated user as response
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "user data updated",
 		"user":    &user,
@@ -173,30 +163,25 @@ func UpdateUser(c *fiber.Ctx) error {
 }
 
 func AssignRole(c *fiber.Ctx) error {
-	// Parse the incoming request body to extract the fields to update
 	var userUpdate []Role
 	if err := c.BodyParser(&userUpdate); err != nil {
 		log.Println(err)
 		return err
 	}
 
-	// Get the user code from the request parameters
 	userCode := c.Params("userCode")
 
-	// Build the filter to find the user by their code
 	filter := bson.M{"code": userCode}
 
-	// Initialize the update operation
 	var update bson.M
 	if len(userUpdate) > 0 {
-		// If there are fields in the update request, set them using $set
+
 		update = bson.M{"$set": bson.M{"role": userUpdate}}
 	} else {
-		// If no fields provided, return an error or handle it as needed
+
 		return fiber.NewError(fiber.StatusBadRequest, "No fields provided for update")
 	}
 
-	// Perform the update operation
 	var user User
 	err := database.FindOneAndUpdate("users", filter, update).Decode(&user)
 	if err != nil {
@@ -204,7 +189,6 @@ func AssignRole(c *fiber.Ctx) error {
 		return err
 	}
 
-	// Return the updated user as response
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "user data updated",
 		"user":    &user,

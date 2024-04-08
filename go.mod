@@ -15,6 +15,7 @@ require (
 	github.com/go-openapi/runtime v0.26.0 // indirect
 	github.com/go-openapi/strfmt v0.21.7 // indirect
 	github.com/go-openapi/validate v0.22.1 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 )

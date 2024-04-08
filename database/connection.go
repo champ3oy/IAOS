@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"log"
+	"os"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -15,17 +16,14 @@ var (
 
 var dbName = "IssueReporting"
 
-// Connect initializes a connection to MongoDB
 func Connect() error {
-	clientOptions := options.Client().ApplyURI("mongodb+srv://deadalus:Samarithan2293%40@cluster0.nwde7lt.mongodb.net/IssueReporting?retryWrites=true&w=majority")
+	clientOptions := options.Client().ApplyURI(os.Getenv("MONGODB"))
 
-	// Connect to MongoDB
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		return err
 	}
 
-	// Check the connection
 	err = client.Ping(ctx, nil)
 	if err != nil {
 		return err

@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 type NotifyParams struct {
@@ -43,4 +44,4 @@ func NotifyRaw(slackWebhookURL string, p *NotifyParams) error {
 	return nil
 }
 
-var SlackWebhookURL = "https://hooks.slack.com/services/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"
+var SlackWebhookURL = os.Getenv("SLACK_WEBHOOOK")

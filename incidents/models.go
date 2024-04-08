@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-// Incident represents an incident reported in the system
 type Incident struct {
 	Id             string       `json:"id"`
 	Title          string       `json:"title"`
@@ -36,7 +35,6 @@ type Timepoint struct {
 	Metadata  string
 }
 
-// Severity represents the severity level of an incident
 type Severity string
 
 const (
@@ -45,7 +43,6 @@ const (
 	SeverityHigh   Severity = "High"
 )
 
-// Status represents the current status of an incident
 type Status string
 
 const (
