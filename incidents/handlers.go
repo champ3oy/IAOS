@@ -49,6 +49,7 @@ func CreateIncident(c *fiber.Ctx) error {
 
 	data := map[string]interface{}{
 		"createdby": team.Name,
+		"subtext":   fmt.Sprintf("Invitiated by %s", team.Name),
 	}
 
 	jsonData, err := json.Marshal(data)
