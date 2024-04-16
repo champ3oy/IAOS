@@ -43,7 +43,7 @@ func CreateIncident(c *fiber.Ctx) error {
 	incident.TeamId = team.TeamId
 	incident.Resolved = false
 	incident.Timeline = append(incident.Timeline, Timepoint{
-		Title:     "Incident Create",
+		Title:     "Incident Created",
 		CreatedAt: time.Now(),
 	})
 
@@ -112,10 +112,24 @@ func CreateIncident(c *fiber.Ctx) error {
 			assignedToNames[i] = fmt.Sprintf("%s %s <%s>", user.FirstName, user.LastName, user.SlackHandle)
 		}
 		assignedToList := strings.Join(assignedToNames, ", ")
+		data := map[string]interface{}{
+			"assignedTo": assignedToList,
+			"subtext":    fmt.Sprintf("Assigned to: %s", assignedToList),
+		}
+
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			fmt.Println("Error marshalling JSON:", err)
+		}
+
+		jsonString := string(jsonData)
+
+		incident.Metadata = jsonString
+
 		incident.Timeline = append(incident.Timeline, Timepoint{
-			Title:     "Assign",
+			Title:     "Incident Assigned",
 			CreatedAt: time.Now(),
-			Metadata:  `{"assignedTo": "` + assignedToList + `"}`,
+			Metadata:  jsonString,
 		})
 		text = fmt.Sprintf("Incident #%s created and assigned to %s\n\n%s\n%s\nSeverity: %s", incident.Id, assignedToList, incident.Title, incident.Description, severity)
 	} else {
@@ -127,7 +141,7 @@ func CreateIncident(c *fiber.Ctx) error {
 	}
 
 	incident.Timeline = append(incident.Timeline, Timepoint{
-		Title:     "Alert",
+		Title:     "Alerted",
 		CreatedAt: time.Now(),
 	})
 
@@ -380,10 +394,27 @@ func List() ([]Incident, error) {
 
 func Assign(incidentId string, params *AssignParams) (*Incident, error) {
 	filter := bson.M{"acknowledged": false, "id": incidentId}
-	update := bson.M{"$set": bson.M{"assignedto": params.User}}
+	data := map[string]interface{}{
+		"assignedTo": params.User,
+		"subtext":    fmt.Sprintf("Assigned to: %s", params.User),
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+	}
+
+	jsonString := string(jsonData)
+
+	timepoint := Timepoint{
+		Title:     "Incident Assigned",
+		CreatedAt: time.Now(),
+		Metadata:  jsonString,
+	}
+	update := bson.M{"$set": bson.M{"assignedto": params.User}, "$push": bson.M{"timeline": timepoint}}
 
 	var incident Incident
-	err := database.FindOneAndUpdate("incidents", filter, update).Decode(&incident)
+	err = database.FindOneAndUpdate("incidents", filter, update).Decode(&incident)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return nil, err
