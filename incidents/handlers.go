@@ -21,17 +21,6 @@ import (
 
 // Handlers for incident-related routes
 
-func NewIncident() *Incident {
-	return &Incident{
-		Severity:     "Low",
-		Status:       "Open",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-		Acknowledged: false,
-		Resolved:     false,
-	}
-}
-
 func CreateIncident(c *fiber.Ctx) error {
 	email := c.Locals("email").(string)
 	var team auth.Teams
@@ -40,15 +29,27 @@ func CreateIncident(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
-	incident := NewIncident()
+	incident := Incident{
+		Severity:     "Low",
+		Status:       "Open",
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+		Acknowledged: false,
+		Resolved:     false,
+		Timeline:     []Timepoint{},
+	}
+
 	incident.TeamId = team.TeamId
 	incident.Resolved = false
-	incident.Timeline[0] = Timepoint{
-		Title:     "Incident Created",
+	incident.Timeline = append(incident.Timeline, Timepoint{
+		Title:     "Create",
 		CreatedAt: time.Now(),
-	}
+	})
+
+	// check who is on-
 	if err := c.BodyParser(&incident); err != nil {
 		// Handle parsing error
+		log.Println(err)
 		return err
 	}
 
@@ -65,6 +66,7 @@ func CreateIncident(c *fiber.Ctx) error {
 
 	code, err := utils.GenerateRandomCode(6)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 
