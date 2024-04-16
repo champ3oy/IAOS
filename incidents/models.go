@@ -22,7 +22,7 @@ type Incident struct {
 	Actions        []string     `json:"actions"`
 	FollowUps      []string     `json:"followUps"`
 	Timeline       []Timepoint  `json:"timeline"`
-	Metadata       string       `json:"metadat"`
+	Metadata       string       `json:"metadata"`
 }
 
 type Incidents struct {
