@@ -8,6 +8,7 @@ import (
 	"issue-reporting/schedules"
 	"issue-reporting/users"
 	"log"
+	"os"
 
 	_ "issue-reporting/docs"
 
@@ -24,7 +25,7 @@ func main() {
 	if err := database.Connect(); err != nil {
 		log.Fatal(err)
 	}
-
+	port := os.Getenv("PORT")
 	app := fiber.New()
 	app.Use(recover.New())
 	app.Use(cors.New())
@@ -50,5 +51,5 @@ func main() {
 	cron.StartNotifyAssignScheduler()
 	cron.StartNotifyAcknowlegedScheduler()
 
-	app.Listen(":80")
+	app.Listen(":" + port)
 }

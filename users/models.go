@@ -20,7 +20,7 @@ type User struct {
 type Role string
 
 const (
-	Engineer Role = "Enngineer"
+	Engineer Role = "Engineer"
 	Lead     Role = "Lead"
-	Admin    Role = "Amin"
+	Admin    Role = "Admin"
 )
