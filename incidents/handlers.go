@@ -2,6 +2,7 @@ package incidents
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"issue-reporting/auth"
@@ -45,6 +46,19 @@ func CreateIncident(c *fiber.Ctx) error {
 		Title:     "Create",
 		CreatedAt: time.Now(),
 	})
+
+	data := map[string]interface{}{
+		"createdby": team.Name,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+	}
+
+	jsonString := string(jsonData)
+
+	incident.Metadata = jsonString
 
 	// check who is on-
 	if err := c.BodyParser(&incident); err != nil {
