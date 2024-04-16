@@ -43,7 +43,7 @@ func CreateIncident(c *fiber.Ctx) error {
 	incident.TeamId = team.TeamId
 	incident.Resolved = false
 	incident.Timeline = append(incident.Timeline, Timepoint{
-		Title:     "Create",
+		Title:     "Incident Create",
 		CreatedAt: time.Now(),
 	})
 
