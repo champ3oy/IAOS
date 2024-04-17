@@ -53,7 +53,7 @@ func StartNotifyAcknowlegedScheduler() {
 func StartNotifyAssignScheduler() {
 	c := cron.New()
 
-	_, err := c.AddFunc("@every 2m", func() {
+	_, err := c.AddFunc("@every 1m", func() {
 
 		schedule, err := schedules.ScheduledNow()
 		if err != nil {
@@ -66,17 +66,12 @@ func StartNotifyAssignScheduler() {
 		}
 
 		for _, incident := range cursor {
-			for _, user := range incident.AssignedTo {
-				if user.FirstName != "" {
-					continue
-				}
-
+			if incident.AssignedTo == nil || len(incident.AssignedTo) == 0 {
 				_, err := incidents.Assign(incident.Id, &incidents.AssignParams{User: schedule.User})
 
 				if err == nil {
 					log.Println("OK assigned unassigned incident", "incident", incident, "user", schedule.User)
 				} else {
-					log.Println(err)
 					log.Println("FAIL to assign unassigned incident", "incident", incident, "user", schedule.User, "err", err)
 
 				}

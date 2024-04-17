@@ -6,6 +6,7 @@ import (
 	"issue-reporting/utils"
 	"log"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,7 +19,7 @@ func RegisterAuthRoutes(app *fiber.App) {
 
 	authRoutes.Post("/register", Register)
 	authRoutes.Post("/login", Login)
-	authRoutes.Post("/refresh", Refresh).Use(middleware.AuthMiddleware())
+	authRoutes.Post("/refresh", Refresh)
 }
 
 func Register(c *fiber.Ctx) error {
@@ -106,11 +107,31 @@ func Login(c *fiber.Ctx) error {
 
 }
 
+var secretKey = []byte("your-secret-key")
+
+var tokenstr struct {
+	TokenString string `json:tokenString`
+}
+
 func Refresh(c *fiber.Ctx) error {
-	email := c.Locals("email").(string)
-	token, err := middleware.GenerateToken(email)
-	if err != nil {
+	tokenString := tokenstr
+	if err := c.BodyParser(&tokenString); err != nil {
+		// Handle parsing error
+		log.Println(err)
 		return err
 	}
-	return c.JSON(fiber.Map{"token": token})
+	token, _ := jwt.ParseWithClaims(tokenString.TokenString, &middleware.Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return secretKey, nil
+	})
+	// if err != nil {
+	// 	log.Println(err, token)
+	// 	return err
+	// }
+	claims, _ := token.Claims.(*middleware.Claims)
+	newToken, err := middleware.GenerateToken(claims.Email)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return c.JSON(fiber.Map{"token": newToken})
 }

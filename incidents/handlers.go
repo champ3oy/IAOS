@@ -40,13 +40,6 @@ func CreateIncident(c *fiber.Ctx) error {
 		Timeline:     []Timepoint{},
 	}
 
-	incident.TeamId = team.TeamId
-	incident.Resolved = false
-	incident.Timeline = append(incident.Timeline, Timepoint{
-		Title:     "Incident Created",
-		CreatedAt: time.Now(),
-	})
-
 	data := map[string]interface{}{
 		"createdby": team.Name,
 		"subtext":   fmt.Sprintf("Invitiated by %s", team.Name),
@@ -61,7 +54,14 @@ func CreateIncident(c *fiber.Ctx) error {
 
 	incident.Metadata = jsonString
 
-	// check who is on-
+	incident.TeamId = team.TeamId
+	incident.Resolved = false
+	incident.Timeline = append(incident.Timeline, Timepoint{
+		Title:     "Incident Created",
+		CreatedAt: time.Now(),
+		Metadata:  jsonString,
+	})
+
 	if err := c.BodyParser(&incident); err != nil {
 		// Handle parsing error
 		log.Println(err)
@@ -86,14 +86,6 @@ func CreateIncident(c *fiber.Ctx) error {
 	}
 
 	incident.Id = code
-
-	// Someone is on-call
-	_, err = database.InsertOne("incidents", incident)
-	if err != nil {
-		log.Println(err)
-		return fiber.NewError(fiber.StatusExpectationFailed, "incident not created")
-	}
-
 	var text string
 	var severity string
 	switch incident.Severity {
@@ -140,10 +132,30 @@ func CreateIncident(c *fiber.Ctx) error {
 		log.Println(err)
 	}
 
+	data = map[string]interface{}{
+		"createdby": team.Name,
+		"subtext":   fmt.Sprint("Alert sent to everyone on-call and slack"),
+	}
+
+	jsonData, err = json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+	}
+
+	jsonString = string(jsonData)
+
 	incident.Timeline = append(incident.Timeline, Timepoint{
 		Title:     "Alerted",
 		CreatedAt: time.Now(),
+		Metadata:  jsonString,
 	})
+
+	// Someone is on-call
+	_, err = database.InsertOne("incidents", incident)
+	if err != nil {
+		log.Println(err)
+		return fiber.NewError(fiber.StatusExpectationFailed, "incident not created")
+	}
 
 	return c.Status(200).JSON(fiber.Map{
 		"message":  "incident created",
@@ -407,11 +419,11 @@ func Assign(incidentId string, params *AssignParams) (*Incident, error) {
 	jsonString := string(jsonData)
 
 	timepoint := Timepoint{
-		Title:     "Incident Assigned",
+		Title:     "Incident",
 		CreatedAt: time.Now(),
 		Metadata:  jsonString,
 	}
-	update := bson.M{"$set": bson.M{"assignedto": params.User}, "$push": bson.M{"timeline": timepoint}}
+	update := bson.M{"$push": bson.M{"assignedto": params.User, "timeline": timepoint}}
 
 	var incident Incident
 	err = database.FindOneAndUpdate("incidents", filter, update).Decode(&incident)

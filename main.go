@@ -12,7 +12,6 @@ import (
 
 	_ "issue-reporting/docs"
 
-	swagger "github.com/gofiber/contrib/swagger"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -25,6 +24,10 @@ func main() {
 	if err := database.Connect(); err != nil {
 		log.Fatal(err)
 	}
+
+	cron.StartNotifyAssignScheduler()
+	// cron.StartNotifyAcknowlegedScheduler()
+
 	port := os.Getenv("PORT")
 	app := fiber.New()
 	app.Use(recover.New())
@@ -35,21 +38,10 @@ func main() {
 		TimeZone:   "UTC",
 	}))
 
-	swaggerCfg := swagger.Config{
-		BasePath: "/docs", //swagger ui base path
-		FilePath: "./docs/swagger.json",
-	}
-
-	app.Use(swagger.New(swaggerCfg))
-
-	// Register routes from different modules
 	auth.RegisterAuthRoutes(app)
 	incidents.RegisterRoutes(app)
 	users.RegisterRoutes(app)
 	schedules.RegisterRoutes(app)
-
-	cron.StartNotifyAssignScheduler()
-	cron.StartNotifyAcknowlegedScheduler()
 
 	app.Listen(":" + port)
 }
