@@ -35,6 +35,10 @@ func Connect() error {
 	return nil
 }
 
+func GetDatabase() *mongo.Client {
+	return Client
+}
+
 // InsertOne inserts a single document into the specified collection
 func InsertOne(collectionName string, document interface{}) (*mongo.InsertOneResult, error) {
 	collection := Client.Database(dbName).Collection(collectionName)

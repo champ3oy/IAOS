@@ -12,12 +12,14 @@ import (
 	"issue-reporting/users"
 	"issue-reporting/utils"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Handlers for incident-related routes
@@ -183,6 +185,37 @@ func GetIncident(c *fiber.Ctx) error {
 	})
 }
 
+// func GetIncidents(c *fiber.Ctx) error {
+// 	ctx := context.Background()
+// 	email := c.Locals("email").(string)
+// 	var team auth.Teams
+// 	err := database.FindOne("teams", bson.M{"email": email}).Decode(&team)
+// 	if err != nil {
+// 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+// 	}
+
+// 	filter := bson.M{"teamid": team.TeamId}
+// 	cursor, err := database.Find("incidents", filter)
+// 	if err != nil {
+// 		return fmt.Errorf("error finding incidents: %v", err)
+// 	}
+// 	defer cursor.Close(ctx)
+
+// 	var incidents []Incident
+// 	for cursor.Next(ctx) {
+// 		var incident Incident
+// 		if err := cursor.Decode(&incident); err != nil {
+// 			return fmt.Errorf("error decoding incident: %v", err)
+// 		}
+// 		incidents = append(incidents, incident)
+// 	}
+
+// 	return c.Status(200).JSON(fiber.Map{
+// 		"message":   "incidents data",
+// 		"incidents": &incidents,
+// 	})
+// }
+
 func GetIncidents(c *fiber.Ctx) error {
 	ctx := context.Background()
 	email := c.Locals("email").(string)
@@ -192,8 +225,29 @@ func GetIncidents(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
+	// Pagination parameters
+	page := 1      // default page number
+	pageSize := 10 // default page size
+
+	if pageStr := c.Query("page"); pageStr != "" {
+		page, _ = strconv.Atoi(pageStr)
+	}
+	if pageSizeStr := c.Query("pageSize"); pageSizeStr != "" {
+		pageSize, _ = strconv.Atoi(pageSizeStr)
+	}
+
+	// MongoDB filter
 	filter := bson.M{"teamid": team.TeamId}
-	cursor, err := database.Find("incidents", filter)
+
+	// MongoDB options for sorting
+	sortOptions := options.Find().SetSort(bson.D{{"_id", -1}}) // Sort by _id field in descending order
+
+	// MongoDB options for pagination
+	paginationOptions := options.Find().
+		SetSkip(int64((page - 1) * pageSize)).
+		SetLimit(int64(pageSize))
+
+	cursor, err := database.GetDatabase().Database("IssueReporting").Collection("incidents").Find(ctx, filter, sortOptions, paginationOptions)
 	if err != nil {
 		return fmt.Errorf("error finding incidents: %v", err)
 	}
@@ -210,7 +264,7 @@ func GetIncidents(c *fiber.Ctx) error {
 
 	return c.Status(200).JSON(fiber.Map{
 		"message":   "incidents data",
-		"incidents": &incidents,
+		"incidents": incidents,
 	})
 }
 
