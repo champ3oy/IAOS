@@ -228,6 +228,7 @@ func GetIncidents(c *fiber.Ctx) error {
 	// Pagination parameters
 	page := 1      // default page number
 	pageSize := 10 // default page size
+	incType := false
 
 	if pageStr := c.Query("page"); pageStr != "" {
 		page, _ = strconv.Atoi(pageStr)
@@ -235,12 +236,15 @@ func GetIncidents(c *fiber.Ctx) error {
 	if pageSizeStr := c.Query("pageSize"); pageSizeStr != "" {
 		pageSize, _ = strconv.Atoi(pageSizeStr)
 	}
+	if incTypeStr := c.Query("incType"); incTypeStr != "" {
+		incType, _ = strconv.ParseBool(incTypeStr)
+	}
 
 	// MongoDB filter
-	filter := bson.M{"teamid": team.TeamId}
+	filter := bson.M{"teamid": team.TeamId, "resolved": incType}
 
 	// MongoDB options for sorting
-	sortOptions := options.Find().SetSort(bson.D{{"_id", -1}}) // Sort by _id field in descending order
+	sortOptions := options.Find().SetSort(bson.D{{Key: "_id", Value: -1}}) // Sort by _id field in descending order
 
 	// MongoDB options for pagination
 	paginationOptions := options.Find().
