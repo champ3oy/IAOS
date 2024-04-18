@@ -389,7 +389,7 @@ func Resolve(c *fiber.Ctx) error {
 
 	data := map[string]interface{}{
 		"resolvedBy": team,
-		"subtext":    fmt.Sprintf("Incident has been resolved"),
+		"subtext":    "Incident has been resolved",
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -400,7 +400,7 @@ func Resolve(c *fiber.Ctx) error {
 	jsonString := string(jsonData)
 
 	timepoint := Timepoint{
-		Title:     "Incident",
+		Title:     "Resolved ✅",
 		CreatedAt: time.Now(),
 		Metadata:  jsonString,
 	}
@@ -432,8 +432,8 @@ func Acknowledge(c *fiber.Ctx) error {
 	incidentCode := c.Params("incidentId")
 
 	data := map[string]interface{}{
-		"resolvedBy": team,
-		"subtext":    fmt.Sprintf("Incident has been resolved"),
+		"acknowledBy": team,
+		"subtext":     "Incident has been acknowledged",
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -444,7 +444,7 @@ func Acknowledge(c *fiber.Ctx) error {
 	jsonString := string(jsonData)
 
 	timepoint := Timepoint{
-		Title:     "Incident",
+		Title:     "Acknowledged 👍🏼",
 		CreatedAt: time.Now(),
 		Metadata:  jsonString,
 	}
