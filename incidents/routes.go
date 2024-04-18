@@ -16,4 +16,5 @@ func RegisterRoutes(app *fiber.App) {
 	incidents.Get("/assign/:userId/:incidentId", AssignUser)
 	incidents.Get("/acknowledges", AcknowledgeAll)
 	incidents.Get("/acknowledge/:incidentId", Acknowledge)
+	incidents.Get("/resolve/:incidentId", Resolve)
 }

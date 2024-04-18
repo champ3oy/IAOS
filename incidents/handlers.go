@@ -378,6 +378,26 @@ func AssignUser(c *fiber.Ctx) error {
 	})
 }
 
+func Resolve(c *fiber.Ctx) error {
+	incidentCode := c.Params("incidentId")
+
+	// Build the filter to find the incident by their code
+	filter := bson.M{"id": incidentCode}
+	update := bson.M{"$set": bson.M{"resolved": true, "resolvedat": time.Now()}}
+
+	// Perform the update operation
+	var incident Incident
+	err := database.FindOneAndUpdate("incidents", filter, update).Decode(&incident)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNoContent, err.Error())
+	}
+
+	// Return the updated incident as response
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":  "incident resolved",
+		"resolved": true,
+	})
+}
 func Acknowledge(c *fiber.Ctx) error {
 	incidentCode := c.Params("incidentId")
 
