@@ -301,3 +301,21 @@ func UpdateSchedules(c *fiber.Ctx) error {
 		"schedule": &schedule,
 	})
 }
+
+func GetAllSchedules(c *fiber.Ctx) error {
+	cursor, err := database.Find("schedules", bson.M{})
+	if err != nil {
+		return fiber.NewError(fiber.StatusExpectationFailed, "Something went wrong getting schedules")
+	}
+	defer cursor.Close(context.Background())
+
+	var schedules []Schedule
+	if err := cursor.All(context.Background(), &schedules); err != nil {
+		return fiber.NewError(fiber.StatusExpectationFailed, "Something went wrong getting schedules")
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"message":   "all schedules",
+		"schedules": schedules,
+	})
+}
