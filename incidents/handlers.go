@@ -379,15 +379,39 @@ func AssignUser(c *fiber.Ctx) error {
 }
 
 func Resolve(c *fiber.Ctx) error {
+	email := c.Locals("email").(string)
+	var team auth.Teams
+	err := database.FindOne("teams", bson.M{"email": email}).Decode(&team)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+	}
 	incidentCode := c.Params("incidentId")
+
+	data := map[string]interface{}{
+		"resolvedBy": team,
+		"subtext":    fmt.Sprintf("Incident has been resolved"),
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+	}
+
+	jsonString := string(jsonData)
+
+	timepoint := Timepoint{
+		Title:     "Incident",
+		CreatedAt: time.Now(),
+		Metadata:  jsonString,
+	}
 
 	// Build the filter to find the incident by their code
 	filter := bson.M{"id": incidentCode}
-	update := bson.M{"$set": bson.M{"resolved": true, "resolvedat": time.Now()}}
+	update := bson.M{"$set": bson.M{"resolved": true, "resolvedat": time.Now()}, "$push": bson.M{"timeline": timepoint}}
 
 	// Perform the update operation
 	var incident Incident
-	err := database.FindOneAndUpdate("incidents", filter, update).Decode(&incident)
+	err = database.FindOneAndUpdate("incidents", filter, update).Decode(&incident)
 	if err != nil {
 		return fiber.NewError(fiber.StatusNoContent, err.Error())
 	}
@@ -399,15 +423,39 @@ func Resolve(c *fiber.Ctx) error {
 	})
 }
 func Acknowledge(c *fiber.Ctx) error {
+	email := c.Locals("email").(string)
+	var team auth.Teams
+	err := database.FindOne("teams", bson.M{"email": email}).Decode(&team)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+	}
 	incidentCode := c.Params("incidentId")
+
+	data := map[string]interface{}{
+		"resolvedBy": team,
+		"subtext":    fmt.Sprintf("Incident has been resolved"),
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+	}
+
+	jsonString := string(jsonData)
+
+	timepoint := Timepoint{
+		Title:     "Incident",
+		CreatedAt: time.Now(),
+		Metadata:  jsonString,
+	}
 
 	// Build the filter to find the incident by their code
 	filter := bson.M{"id": incidentCode, "assignedto.FirstName": bson.M{"$ne": ""}}
-	update := bson.M{"$set": bson.M{"acknowledged": true, "acknowledgedat": time.Now()}}
+	update := bson.M{"$set": bson.M{"acknowledged": true, "acknowledgedat": time.Now()}, "$push": bson.M{"timeline": timepoint}}
 
 	// Perform the update operation
 	var incident Incident
-	err := database.FindOneAndUpdate("incidents", filter, update).Decode(&incident)
+	err = database.FindOneAndUpdate("incidents", filter, update).Decode(&incident)
 	if err != nil {
 		return fiber.NewError(fiber.StatusNoContent, err.Error())
 	}
