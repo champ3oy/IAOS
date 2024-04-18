@@ -7,12 +7,12 @@ import (
 )
 
 func RegisterRoutes(app *fiber.App) {
-	users := app.Group("/schedules").Use(middleware.AuthMiddleware())
-	users.Get("/", GetAllSchedules)
-	users.Get("/now", GetScheduledNow)
-	users.Get("/time/:timestamp", GetScheduledAt)
-	users.Post("/range", ListByTimeRange)
-	users.Delete("/:id", DeleteSchedule)
-	users.Put("/:id", UpdateSchedules)
-	users.Post("/:userCode", CreateSchedules)
+	schedule := app.Group("/schedules").Use(middleware.AuthMiddleware())
+	schedule.Get("/", GetAllSchedules)
+	schedule.Get("/now", GetScheduledNow)
+	schedule.Get("/time/:timestamp", GetScheduledAt)
+	schedule.Post("/range", ListByTimeRange)
+	schedule.Delete("/:id", DeleteSchedule)
+	schedule.Put("/:id", UpdateSchedules)
+	schedule.Post("/:userCode", CreateSchedules)
 }
