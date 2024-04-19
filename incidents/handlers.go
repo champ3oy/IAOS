@@ -559,7 +559,6 @@ func ResolvedList() ([]Incident, error) {
 
 func Assign(incidentId string, params *AssignParams) (*Incident, error) {
 	filter := bson.M{"acknowledged": false, "id": incidentId}
-	users := []users.User{}
 	data := map[string]interface{}{
 		"assignedTo": params.User,
 		"subtext":    fmt.Sprintf("Assigned to: %s", params.User),
@@ -577,7 +576,7 @@ func Assign(incidentId string, params *AssignParams) (*Incident, error) {
 		CreatedAt: time.Now(),
 		Metadata:  jsonString,
 	}
-	update := bson.M{"$push": bson.M{"assignedto": append(users, params.User), "timeline": timepoint}}
+	update := bson.M{"$push": bson.M{"assignedto": params.User, "timeline": timepoint}}
 
 	var incident Incident
 	err = database.FindOneAndUpdate("incidents", filter, update).Decode(&incident)
