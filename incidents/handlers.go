@@ -572,7 +572,7 @@ func Assign(incidentId string, params *AssignParams) (*Incident, error) {
 	jsonString := string(jsonData)
 
 	timepoint := Timepoint{
-		Title:     "Incident",
+		Title:     "Incident Assigned",
 		CreatedAt: time.Now(),
 		Metadata:  jsonString,
 	}
