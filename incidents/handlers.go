@@ -40,6 +40,7 @@ func CreateIncident(c *fiber.Ctx) error {
 		Acknowledged: false,
 		Resolved:     false,
 		Timeline:     []Timepoint{},
+		AssignedTo:   []users.User{},
 	}
 
 	data := map[string]interface{}{
