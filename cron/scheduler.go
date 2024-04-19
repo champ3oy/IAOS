@@ -58,7 +58,7 @@ func StartNotifyAcknowlegedScheduler() {
 func StartNotifyAssignScheduler() {
 	c := cron.New()
 
-	_, err := c.AddFunc("@every 5m", func() {
+	_, err := c.AddFunc("@every 2m", func() {
 
 		schedule, err := schedules.ScheduledNow()
 		if err != nil {
