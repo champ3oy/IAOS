@@ -5,6 +5,7 @@ import (
 	"issue-reporting/cron"
 	"issue-reporting/database"
 	"issue-reporting/incidents"
+	"issue-reporting/reports"
 	"issue-reporting/schedules"
 	"issue-reporting/users"
 	"log"
@@ -34,7 +35,7 @@ func main() {
 	app.Use(recover.New())
 	app.Use(cors.New())
 	app.Use(logger.New(logger.Config{
-		Format:     "${cyan}[${time}] ${red}[${ip}] ${magenta}${bytesSent}bytes ${green}${latency} ${blue}${method} ${white}${path}\n",
+		Format:     "${cyan}[${time}] ${red}[${ip}] ${magenta}${bytesSent}bytes ${green}${latency} ${blue}${method} ${blue}${status} ${white}${path}\n",
 		TimeFormat: "02-Jan-2006",
 		TimeZone:   "UTC",
 	}))
@@ -43,6 +44,7 @@ func main() {
 	incidents.RegisterRoutes(app)
 	users.RegisterRoutes(app)
 	schedules.RegisterRoutes(app)
+	reports.RegisterRoutes(app)
 
 	app.Listen(":" + port)
 }
