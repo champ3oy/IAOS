@@ -26,6 +26,7 @@ func main() {
 	}
 
 	cron.StartNotifyAssignScheduler()
+	cron.ReportGeneratorScheduler()
 	// cron.StartNotifyAcknowlegedScheduler()
 
 	port := os.Getenv("PORT")

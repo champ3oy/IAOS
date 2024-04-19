@@ -49,6 +49,15 @@ func InsertOne(collectionName string, document interface{}) (*mongo.InsertOneRes
 	return result, nil
 }
 
+func InsertMany(collectionName string, document []interface{}) (*mongo.InsertManyResult, error) {
+	collection := Client.Database(dbName).Collection(collectionName)
+	result, err := collection.InsertMany(ctx, document)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 // FindOne finds a single document in the specified collection that matches the filter
 func FindOne(collectionName string, filter interface{}) *mongo.SingleResult {
 	collection := Client.Database(dbName).Collection(collectionName)

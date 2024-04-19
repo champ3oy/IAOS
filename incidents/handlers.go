@@ -530,6 +530,32 @@ func List() ([]Incident, error) {
 	return incidents, nil
 }
 
+func ResolvedList() ([]Incident, error) {
+	ctx := context.Background()
+	filter := bson.M{"resolved": true, "reportCreated": false}
+
+	cursor, err := database.Find("incidents", filter)
+	if err != nil {
+		return nil, fmt.Errorf("error finding incidents: %v", err)
+	}
+	defer cursor.Close(ctx)
+
+	var incidents []Incident
+	for cursor.Next(ctx) {
+		var incident Incident
+		if err := cursor.Decode(&incident); err != nil {
+			return nil, fmt.Errorf("error decoding incident: %v", err)
+		}
+		incidents = append(incidents, incident)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, fmt.Errorf("cursor error: %v", err)
+	}
+
+	return incidents, nil
+}
+
 func Assign(incidentId string, params *AssignParams) (*Incident, error) {
 	filter := bson.M{"acknowledged": false, "id": incidentId}
 	data := map[string]interface{}{

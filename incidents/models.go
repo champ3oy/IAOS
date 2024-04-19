@@ -23,6 +23,7 @@ type Incident struct {
 	FollowUps      []string     `json:"followUps"`
 	Timeline       []Timepoint  `json:"timeline"`
 	Metadata       string       `json:"metadata"`
+	ReportCreated  bool         `json:"reportCreated"`
 }
 
 type Incidents struct {

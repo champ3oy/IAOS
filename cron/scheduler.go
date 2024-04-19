@@ -1,14 +1,19 @@
 package cron
 
 import (
+	"context"
 	"fmt"
+	"issue-reporting/database"
 	"issue-reporting/incidents"
+	"issue-reporting/reports"
 	"issue-reporting/schedules"
 	"issue-reporting/slack"
 	"log"
 	"strings"
 
 	"github.com/robfig/cron/v3"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func StartNotifyAcknowlegedScheduler() {
@@ -53,7 +58,7 @@ func StartNotifyAcknowlegedScheduler() {
 func StartNotifyAssignScheduler() {
 	c := cron.New()
 
-	_, err := c.AddFunc("@every 1m", func() {
+	_, err := c.AddFunc("@every 5m", func() {
 
 		schedule, err := schedules.ScheduledNow()
 		if err != nil {
@@ -76,6 +81,53 @@ func StartNotifyAssignScheduler() {
 
 				}
 			}
+		}
+	})
+	if err != nil {
+		log.Fatalf("Error adding cronjob: %v", err)
+	}
+
+	c.Start()
+}
+
+func ReportGeneratorScheduler() {
+	c := cron.New()
+	_, err := c.AddFunc("@every 30m", func() {
+		cursor, err := incidents.ResolvedList()
+		if err != nil {
+			log.Fatalf("Error starting cronjob gen: %v", err)
+		}
+		if cursor == nil {
+			log.Fatalf("Error starting cronjob gen: %v", err)
+		}
+
+		reportslist := make([]reports.Report, len(cursor))
+
+		for i, incident := range cursor {
+			report := reports.GeneratePDF(incident)
+			reportslist[i] = report
+		}
+
+		var interfaceSlice []interface{}
+		for _, r := range reportslist {
+			interfaceSlice = append(interfaceSlice, r)
+		}
+
+		// Add generated reports to the database
+		database.InsertMany("reports", interfaceSlice)
+
+		var bulkWrites []mongo.WriteModel
+		for _, incident2 := range cursor {
+			filter := bson.M{"id": incident2.Id}
+			update := bson.M{"$set": bson.M{"reportCreated": true}}
+			model := mongo.NewUpdateOneModel().SetFilter(filter).SetUpdate(update)
+			bulkWrites = append(bulkWrites, model)
+		}
+
+		// Execute the bulk update
+		_, err = database.GetDatabase().Database("IssueReporting").Collection("incidents").BulkWrite(context.Background(), bulkWrites)
+		if err != nil {
+			log.Println(err)
 		}
 	})
 	if err != nil {
