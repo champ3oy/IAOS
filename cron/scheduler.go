@@ -22,10 +22,10 @@ func StartNotifyAcknowlegedScheduler() {
 	_, err := c.AddFunc("@every 10m", func() {
 		cursor, err := incidents.List()
 		if err != nil {
-			log.Fatalf("Error starting cronjob: %v", err)
+			log.Printf("Error starting cronjob: %v", err)
 		}
 		if cursor == nil {
-			log.Fatalf("Error starting cronjob: %v", err)
+			log.Printf("Error starting cronjob: %v", err)
 		}
 
 		var items = []string{"These incidents have not been acknowledged yet. \nPlease acknowledge them otherwise you will be reminded every 10 minutes: \n"}
@@ -49,7 +49,7 @@ func StartNotifyAcknowlegedScheduler() {
 
 	})
 	if err != nil {
-		log.Fatalf("Error adding cronjob: %v", err)
+		log.Printf("Error adding cronjob: %v", err)
 	}
 
 	c.Start()
@@ -84,7 +84,7 @@ func StartNotifyAssignScheduler() {
 		}
 	})
 	if err != nil {
-		log.Fatalf("Error adding cronjob: %v", err)
+		log.Printf("Error adding cronjob: %v", err)
 	}
 
 	c.Start()
@@ -95,10 +95,10 @@ func ReportGeneratorScheduler() {
 	_, err := c.AddFunc("@every 30m", func() {
 		cursor, err := incidents.ResolvedList()
 		if err != nil {
-			log.Fatalf("Error starting cronjob gen: %v", err)
+			log.Printf("Error starting cronjob gen: %v", err)
 		}
 		if cursor == nil {
-			log.Fatalf("Error starting cronjob gen: %v", err)
+			log.Printf("Error starting cronjob gen: %v", err)
 		}
 
 		reportslist := make([]reports.Report, len(cursor))
@@ -124,14 +124,16 @@ func ReportGeneratorScheduler() {
 			bulkWrites = append(bulkWrites, model)
 		}
 
-		// Execute the bulk update
-		_, err = database.GetDatabase().Database("IssueReporting").Collection("incidents").BulkWrite(context.Background(), bulkWrites)
-		if err != nil {
-			log.Println(err)
+		if len(bulkWrites) > 0 {
+			// Execute the bulk update
+			_, err = database.GetDatabase().Database("IssueReporting").Collection("incidents").BulkWrite(context.Background(), bulkWrites)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	})
 	if err != nil {
-		log.Fatalf("Error adding cronjob: %v", err)
+		log.Printf("Error adding cronjob: %v", err)
 	}
 
 	c.Start()
