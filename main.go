@@ -33,7 +33,10 @@ func main() {
 	port := os.Getenv("PORT")
 	app := fiber.New()
 	app.Use(recover.New())
-	app.Use(cors.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://localhost:3000, http://localhost:3001",
+		AllowHeaders: "Origin, Content-Type, Accept",
+	}))
 	app.Use(logger.New(logger.Config{
 		Format:     "${cyan}[${time}] ${red}[${ip}] ${magenta}${bytesSent}bytes ${green}${latency} ${blue}${method} ${blue}${status} ${white}${path}\n",
 		TimeFormat: "02-Jan-2006",
