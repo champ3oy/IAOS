@@ -5,79 +5,12 @@ import (
 	"fmt"
 	"issue-reporting/auth"
 	"issue-reporting/database"
-	"issue-reporting/utils"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
-
-func CreateUser(c *fiber.Ctx) error {
-	email := c.Locals("email").(string)
-	var team auth.Teams
-	err := database.FindOne("teams", bson.M{"email": email}).Decode(&team)
-	if err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
-	}
-
-	var user User
-	if err := c.BodyParser(&user); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	if len(user.FirstName) == 0 {
-		return fiber.NewError(fiber.StatusBadRequest, "first name is empty")
-	}
-
-	if len(user.LastName) == 0 {
-		return fiber.NewError(fiber.StatusBadRequest, "last name is empty")
-	}
-
-	if len(user.Email) == 0 {
-		return fiber.NewError(fiber.StatusBadRequest, "email is empty")
-	}
-
-	var existingUser User
-	err = database.FindOne("users", bson.M{"email": user.Email}).Decode(&existingUser)
-	if err != nil && err != mongo.ErrNoDocuments {
-		log.Println(err)
-		return fiber.NewError(fiber.StatusExpectationFailed, "Something went wrong")
-	}
-
-	if existingUser.Email == user.Email {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   "Bad Request",
-			"message": "Email already exists",
-		})
-	}
-
-	code, err := utils.GenerateRandomCode(5)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	user.Code = code
-	user.Team = team.TeamId
-	user.Role[0] = "Engineer"
-
-	result, err := database.InsertOne("users", user)
-	if err != nil {
-		log.Println(err)
-		return fiber.NewError(fiber.StatusExpectationFailed, "user not created")
-	}
-
-	insertedID := result.InsertedID.(primitive.ObjectID).Hex()
-
-	return c.Status(200).JSON(fiber.Map{
-		"message":  "user created",
-		"userId":   insertedID,
-		"userCode": code,
-	})
-}
 
 func GetUser(c *fiber.Ctx) error {
 	userCode := c.Params("userCode")
@@ -101,8 +34,8 @@ func GetUser(c *fiber.Ctx) error {
 func GetUsers(c *fiber.Ctx) error {
 	ctx := context.Background()
 	email := c.Locals("email").(string)
-	var team auth.Teams
-	err := database.FindOne("teams", bson.M{"email": email}).Decode(&team)
+	var team auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&team)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}

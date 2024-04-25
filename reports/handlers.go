@@ -13,8 +13,8 @@ import (
 func GetReports(c *fiber.Ctx) error {
 	ctx := context.Background()
 	email := c.Locals("email").(string)
-	var team auth.Teams
-	err := database.FindOne("teams", bson.M{"email": email}).Decode(&team)
+	var team auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&team)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}

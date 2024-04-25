@@ -2,7 +2,6 @@ package main
 
 import (
 	"issue-reporting/auth"
-	"issue-reporting/cron"
 	"issue-reporting/database"
 	"issue-reporting/incidents"
 	"issue-reporting/reports"
@@ -26,8 +25,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cron.StartNotifyAssignScheduler()
-	cron.ReportGeneratorScheduler()
+	// cron.StartNotifyAssignScheduler()
+	// cron.ReportGeneratorScheduler()
 	// cron.StartNotifyAcknowlegedScheduler()
 
 	port := os.Getenv("PORT")

@@ -8,7 +8,6 @@ import (
 
 func RegisterRoutes(app *fiber.App) {
 	users := app.Group("/users").Use(middleware.AuthMiddleware())
-	users.Post("/", CreateUser)
 	users.Get("/:userCode", GetUser)
 	users.Get("/", GetUsers)
 	users.Put("/:userCode", UpdateUser)

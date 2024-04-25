@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func SendNotification(message string, team auth.Teams) {
+func SendNotification(message string, team auth.Team) {
 	done := make(chan bool)
 	start := time.Now()
 
@@ -37,9 +37,9 @@ func SendNotification(message string, team auth.Teams) {
 				_ = slack.Notify(&slack.NotifyParams{Text: message})
 			case "Email":
 				email.SendWithResend(email.EmailParams{
-					Recipients: team.Email,
-					Subject:    "Incident Report Alert 🆘🚨",
-					Message:    message,
+					// Recipients: team.Email,
+					Subject: "Incident Report Alert 🆘🚨",
+					Message: message,
 				})
 			case "Push notification":
 				pushnotification.SendPushNotification(&pushnotification.PushParams{

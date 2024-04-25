@@ -16,60 +16,143 @@ import (
 
 func RegisterAuthRoutes(app *fiber.App) {
 	authRoutes := app.Group("/auth")
-
 	authRoutes.Post("/register", Register)
+	authRoutes.Post("/join", JoinTeam)
 	authRoutes.Post("/login", Login)
 	authRoutes.Post("/refresh", Refresh)
 }
 
 func Register(c *fiber.Ctx) error {
-	var team Teams
-	if err := c.BodyParser(&team); err != nil {
+	var body Body
+	if err := c.BodyParser(&body); err != nil {
 		return err
 	}
 
-	var existingTeam Teams
-	err := database.FindOne("teams", bson.M{"email": team.Email}).Decode(&existingTeam)
+	var existingUser User
+	err := database.FindOne("users", bson.M{"email": body.Email}).Decode(&existingUser)
 	if err != nil && err != mongo.ErrNoDocuments {
 		log.Println(err)
 		return fiber.NewError(fiber.StatusExpectationFailed, "Something went wrong")
 	}
 
-	if existingTeam.Email == team.Email {
+	if existingUser.Email == body.Email {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Bad Request",
 			"message": "Email already exists",
 		})
 	}
 
-	if team.Email == "" || team.Password == "" {
+	if body.Email == "" || body.Password == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Bad Request",
 			"message": "Email and password are required",
 		})
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(team.Password), bcrypt.DefaultCost)
+	// generate unique codes
+	teamId, err := utils.GenerateRandomCode(18)
+	if err != nil {
+		return err
+	}
+	apiKey, err := utils.GenerateRandomCode(16)
+	if err != nil {
+		return err
+	}
+	apiKey2, err := utils.GenerateRandomCode(16)
 	if err != nil {
 		return err
 	}
 
-	team.Password = string(hashedPassword)
-	code, err := utils.GenerateRandomCode(6)
+	// Create user
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
-	team.TeamId = code
+	var user User
+	user.Name = body.Name
+	user.Email = body.Email
+	user.Password = string(hashedPassword)
+	user.TeamId = teamId
 
+	// create team for user
+	var team Team
+	team.APIKey = apiKey + "." + apiKey2
+	team.TeamName = body.TeamName
+	team.TeamId = teamId
+
+	//insert everthing to the database
+	result1, err := database.InsertOne("users", user)
+	if err != nil {
+		return fiber.NewError(fiber.StatusExpectationFailed, "user not created")
+	}
 	result, err := database.InsertOne("teams", team)
 	if err != nil {
 		return fiber.NewError(fiber.StatusExpectationFailed, "team not created")
 	}
 
+	insertedID1 := result1.InsertedID.(primitive.ObjectID).Hex()
 	insertedID := result.InsertedID.(primitive.ObjectID).Hex()
 
 	return c.Status(200).JSON(fiber.Map{
-		"message": "team created",
+		"message": "user created",
+		"data": fiber.Map{
+			"userId": insertedID1,
+			"teamId": insertedID,
+		},
+	})
+}
+
+func JoinTeam(c *fiber.Ctx) error {
+	var body JoinTeamBody
+	if err := c.BodyParser(&body); err != nil {
+		return err
+	}
+
+	var existingUser User
+	err := database.FindOne("users", bson.M{"email": body.Email}).Decode(&existingUser)
+	if err != nil && err != mongo.ErrNoDocuments {
+		log.Println(err)
+		return fiber.NewError(fiber.StatusExpectationFailed, "Something went wrong")
+	}
+
+	if existingUser.Email == body.Email {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Bad Request",
+			"message": "Email already exists",
+		})
+	}
+
+	if body.Email == "" || body.Password == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Bad Request",
+			"message": "Email and password are required",
+		})
+	}
+
+	// get team id
+	teamId := body.TeamId
+
+	// Create user
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	var user User
+	user.Name = body.Name
+	user.Email = body.Email
+	user.Password = string(hashedPassword)
+	user.TeamId = teamId
+
+	//insert everthing to the database
+	result, err := database.InsertOne("users", user)
+	if err != nil {
+		return fiber.NewError(fiber.StatusExpectationFailed, "user not created")
+	}
+
+	insertedID := result.InsertedID.(primitive.ObjectID).Hex()
+
+	return c.Status(200).JSON(fiber.Map{
+		"message": "user created",
 		"data": fiber.Map{
 			"id": insertedID,
 		},
@@ -85,8 +168,8 @@ func Login(c *fiber.Ctx) error {
 		return err
 	}
 
-	var foundDoc Teams
-	err := database.FindOne("teams", bson.M{"email": credentials.Email}).Decode(&foundDoc)
+	var foundDoc User
+	err := database.FindOne("users", bson.M{"email": credentials.Email}).Decode(&foundDoc)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}

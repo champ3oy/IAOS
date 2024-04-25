@@ -6,13 +6,34 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Teams struct {
+type Body struct {
+	Name     string `bson:"name"`
+	Email    string `bson:"email"`
+	Password string `bson:"password"`
+	TeamName string `bson:"teamName"`
+}
+
+type JoinTeamBody struct {
+	Name     string `bson:"name"`
+	Email    string `bson:"email"`
+	Password string `bson:"password"`
+	TeamId   string `bson:"teamId"`
+}
+
+type User struct {
+	ID       primitive.ObjectID `bson:"_id,omitempty"`
+	Name     string             `bson:"name"`
+	Email    string             `bson:"email"`
+	Password string             `bson:"password"`
+	TeamId   string             `bson:"teamId"`
+}
+
+type Team struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty"`
-	Name          string             `bson:"name"`
-	Email         string             `bson:"email"`
-	Password      string             `bson:"password"`
+	TeamName      string             `bson:"teamName"`
 	TeamId        string             `bson:"teamId"`
 	Notifications []Notification     `bson:"notifications"`
+	APIKey        string             `json:"apiKey"`
 }
 
 type Notification struct {

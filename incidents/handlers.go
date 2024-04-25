@@ -26,8 +26,8 @@ import (
 
 func CreateIncident(c *fiber.Ctx) error {
 	email := c.Locals("email").(string)
-	var team auth.Teams
-	err := database.FindOne("teams", bson.M{"email": email}).Decode(&team)
+	var team auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&team)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
@@ -220,8 +220,8 @@ func GetIncident(c *fiber.Ctx) error {
 func GetIncidents(c *fiber.Ctx) error {
 	ctx := context.Background()
 	email := c.Locals("email").(string)
-	var team auth.Teams
-	err := database.FindOne("teams", bson.M{"email": email}).Decode(&team)
+	var team auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&team)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
@@ -385,8 +385,8 @@ func AssignUser(c *fiber.Ctx) error {
 
 func Resolve(c *fiber.Ctx) error {
 	email := c.Locals("email").(string)
-	var team auth.Teams
-	err := database.FindOne("teams", bson.M{"email": email}).Decode(&team)
+	var team auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&team)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
@@ -429,8 +429,8 @@ func Resolve(c *fiber.Ctx) error {
 }
 func Acknowledge(c *fiber.Ctx) error {
 	email := c.Locals("email").(string)
-	var team auth.Teams
-	err := database.FindOne("teams", bson.M{"email": email}).Decode(&team)
+	var team auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&team)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
@@ -475,8 +475,8 @@ func Acknowledge(c *fiber.Ctx) error {
 func AcknowledgeAll(c *fiber.Ctx) error {
 	ctx := context.Background()
 	email := c.Locals("email").(string)
-	var team auth.Teams
-	err := database.FindOne("teams", bson.M{"email": email}).Decode(&team)
+	var team auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&team)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
