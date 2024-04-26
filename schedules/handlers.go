@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"issue-reporting/auth"
 	"issue-reporting/database"
-	"issue-reporting/users"
 	"log"
 	"time"
 
@@ -41,7 +41,11 @@ func CreateSchedules(c *fiber.Ctx) error {
 
 	existingSchedule, err := ScheduledAt(body.TimeRange.Start.Format(time.RFC3339), body.TimeRange.End.Format(time.RFC3339))
 	if err != nil {
-		return err
+		log.Println(err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Bad Request",
+			"message": "invalid time range",
+		})
 	}
 	if existingSchedule != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -50,7 +54,7 @@ func CreateSchedules(c *fiber.Ctx) error {
 		})
 	}
 
-	var user users.User
+	var user auth.User
 	err = database.FindOne("users", bson.M{"code": userCode}).Decode(&user)
 	if err != nil {
 		log.Println(err, userCode)
@@ -145,12 +149,13 @@ func SchedulesWithinRange(startTimestamp, endTimestamp string) ([]Schedule, erro
 	return schedules, nil
 }
 
-func Scheduled(timestamp time.Time) (*Schedule, error) {
+func Scheduled(timestamp time.Time, teamId string) (*Schedule, error) {
 	filter := bson.M{
+		"user.teamId": teamId,
 		"$or": []bson.M{
-			bson.M{"time.start": bson.M{"$lt": timestamp.UTC()}, "time.end": bson.M{"$gt": timestamp.UTC()}},
-			bson.M{"time.start": bson.M{"$lt": timestamp.UTC()}, "time.end": timestamp.UTC()},
-			bson.M{"time.start": timestamp.UTC(), "time.end": bson.M{"$gt": timestamp.UTC()}},
+			{"time.start": bson.M{"$lt": timestamp.UTC()}, "time.end": bson.M{"$gt": timestamp.UTC()}},
+			{"time.start": bson.M{"$lt": timestamp.UTC()}, "time.end": timestamp.UTC()},
+			{"time.start": timestamp.UTC(), "time.end": bson.M{"$gt": timestamp.UTC()}},
 		},
 	}
 
@@ -178,12 +183,19 @@ func VerifyTimeRange(timeRange TimeRange) error {
 	return nil
 }
 
-func ScheduledNow() (*Schedule, error) {
-	return Scheduled(time.Now())
+func ScheduledNow(teamId string) (*Schedule, error) {
+	return Scheduled(time.Now(), teamId)
 }
 
 func GetScheduledNow(c *fiber.Ctx) error {
-	schedule, err := ScheduledNow()
+	email := c.Locals("email").(string)
+	var user auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+	}
+
+	schedule, err := Scheduled(time.Now(), user.TeamId)
 	if err != nil {
 		log.Printf("Error starting cronjob1: %v", err)
 	}
@@ -195,13 +207,20 @@ func GetScheduledNow(c *fiber.Ctx) error {
 }
 
 func GetScheduledAt(c *fiber.Ctx) error {
+	email := c.Locals("email").(string)
+	var user auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+	}
+
 	timestamp := c.Params(("timestamp"))
 	parsedtime, err := time.Parse(time.RFC3339, timestamp)
 	if err != nil {
 		return fiber.NewError(fiber.StatusExpectationFailed, "Invalid timestamp")
 	}
 
-	schedule, err := Scheduled(parsedtime)
+	schedule, err := Scheduled(parsedtime, user.TeamId)
 	if err != nil {
 		return fiber.NewError(fiber.StatusExpectationFailed, "Something went wrong getting schedules")
 	}
@@ -303,7 +322,14 @@ func UpdateSchedules(c *fiber.Ctx) error {
 }
 
 func GetAllSchedules(c *fiber.Ctx) error {
-	cursor, err := database.Find("schedules", bson.M{})
+	email := c.Locals("email").(string)
+	var user auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+	}
+
+	cursor, err := database.Find("schedules", bson.M{"user.teamId": user.TeamId})
 	if err != nil {
 		return fiber.NewError(fiber.StatusExpectationFailed, "Something went wrong getting schedules")
 	}

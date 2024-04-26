@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"issue-reporting/database"
 	"issue-reporting/incidents"
+	"issue-reporting/notification"
 	"issue-reporting/reports"
 	"issue-reporting/schedules"
-	"issue-reporting/slack"
 	"log"
-	"strings"
 
 	"github.com/robfig/cron/v3"
 	"go.mongodb.org/mongo-driver/bson"
@@ -28,25 +27,18 @@ func StartNotifyAcknowlegedScheduler() {
 			log.Printf("Error starting cronjob: %v", err)
 		}
 
-		var items = []string{"These incidents have not been acknowledged yet. \nPlease acknowledge them otherwise you will be reminded every 10 minutes: \n"}
 		for _, incident := range cursor {
 			for _, user := range incident.AssignedTo {
 				var assignee string
-				if user.FirstName != "" {
-					assignee = fmt.Sprintf("%s %s @%s", user.FirstName, user.LastName, user.SlackHandle)
+				if user.Name != "" {
+					assignee = fmt.Sprintf("%s @%s", user.Name, user.SlackHandle)
 				} else {
 					assignee = "Unassigned"
 				}
 
-				items = append(items, fmt.Sprintf("[%s] \n\n[#%s] %s", assignee, incident.Id, incident.Title))
-
+				notification.SendNotification(fmt.Sprintf("This incident has not been acknowledged yet. \nPlease acknowledge them otherwise you will be reminded every 10 minutes: \n\n[%s] \n\n[#%s] %s", assignee, incident.Id, incident.Title), user)
 			}
 		}
-
-		if len(cursor) > 0 {
-			_ = slack.Notify(&slack.NotifyParams{Text: strings.Join(items, "\n")})
-		}
-
 	})
 	if err != nil {
 		log.Printf("Error adding cronjob: %v", err)
@@ -57,13 +49,7 @@ func StartNotifyAcknowlegedScheduler() {
 
 func StartNotifyAssignScheduler() {
 	c := cron.New()
-
-	_, err := c.AddFunc("@every 2m", func() {
-
-		schedule, err := schedules.ScheduledNow()
-		if err != nil {
-			log.Printf("Error starting cronjob1: %v", err)
-		}
+	_, err := c.AddFunc("@every 5m", func() {
 
 		cursor, err := incidents.List()
 		if err != nil {
@@ -71,6 +57,10 @@ func StartNotifyAssignScheduler() {
 		}
 
 		for _, incident := range cursor {
+			schedule, err := schedules.ScheduledNow(incident.TeamId)
+			if err != nil {
+				log.Printf("Error starting cronjob1: %v", err)
+			}
 			if incident.AssignedTo == nil || len(incident.AssignedTo) == 0 {
 				_, err := incidents.Assign(incident.Id, &incidents.AssignParams{User: schedule.User})
 
@@ -95,17 +85,19 @@ func ReportGeneratorScheduler() {
 	_, err := c.AddFunc("@every 30m", func() {
 		cursor, err := incidents.ResolvedList()
 		if err != nil {
-			log.Printf("Error starting cronjob gen: %v", err)
+			log.Printf("Error fetching resolved incidents: %v", err)
+			return
 		}
-		if cursor == nil {
-			log.Printf("Error starting cronjob gen: %v", err)
+		if len(cursor) == 0 {
+			log.Println("No resolved incidents found")
+			return
 		}
 
-		reportslist := make([]reports.Report, len(cursor))
+		var reportslist []reports.Report
 
-		for i, incident := range cursor {
+		for _, incident := range cursor {
 			report := reports.GeneratePDF(incident)
-			reportslist[i] = report
+			reportslist = append(reportslist, report)
 		}
 
 		var interfaceSlice []interface{}
@@ -114,7 +106,10 @@ func ReportGeneratorScheduler() {
 		}
 
 		// Add generated reports to the database
-		database.InsertMany("reports", interfaceSlice)
+		if _, err := database.InsertMany("reports", interfaceSlice); err != nil {
+			log.Printf("Error inserting reports to database: %v", err)
+			return
+		}
 
 		var bulkWrites []mongo.WriteModel
 		for _, incident2 := range cursor {
@@ -125,10 +120,10 @@ func ReportGeneratorScheduler() {
 		}
 
 		if len(bulkWrites) > 0 {
-			// Execute the bulk update
 			_, err = database.GetDatabase().Database("IssueReporting").Collection("incidents").BulkWrite(context.Background(), bulkWrites)
 			if err != nil {
 				log.Println(err)
+				return
 			}
 		}
 	})

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"issue-reporting/auth"
 	"issue-reporting/database"
+	"issue-reporting/notification"
 	"issue-reporting/schedules"
 	"issue-reporting/slack"
-	"issue-reporting/users"
 	"issue-reporting/utils"
 	"log"
 	"strconv"
@@ -26,12 +26,13 @@ import (
 
 func CreateIncident(c *fiber.Ctx) error {
 	email := c.Locals("email").(string)
-	var team auth.User
-	err := database.FindOne("users", bson.M{"email": email}).Decode(&team)
+	var user auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&user)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
+	// initiate an incident template
 	incident := Incident{
 		Severity:     "Low",
 		Status:       "Open",
@@ -40,30 +41,8 @@ func CreateIncident(c *fiber.Ctx) error {
 		Acknowledged: false,
 		Resolved:     false,
 		Timeline:     []Timepoint{},
-		AssignedTo:   []users.User{},
+		AssignedTo:   []auth.User{},
 	}
-
-	data := map[string]interface{}{
-		"createdby": team.Name,
-		"subtext":   fmt.Sprintf("Invitiated by %s", team.Name),
-	}
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		fmt.Println("Error marshalling JSON:", err)
-	}
-
-	jsonString := string(jsonData)
-
-	incident.Metadata = jsonString
-
-	incident.TeamId = team.TeamId
-	incident.Resolved = false
-	incident.Timeline = append(incident.Timeline, Timepoint{
-		Title:     "Incident Created",
-		CreatedAt: time.Now(),
-		Metadata:  jsonString,
-	})
 
 	if err := c.BodyParser(&incident); err != nil {
 		// Handle parsing error
@@ -71,24 +50,32 @@ func CreateIncident(c *fiber.Ctx) error {
 		return err
 	}
 
-	// check who is on-call
-	schedule, err := schedules.ScheduledNow()
+	// create a timeline item for when incident is created
+	data := map[string]interface{}{
+		"createdby": user.Name,
+		"subtext":   fmt.Sprintf("Initiated by %s", user.Name),
+	}
+	jsonData, err := json.Marshal(data)
 	if err != nil {
-		log.Println(err)
-		return fiber.NewError(fiber.StatusExpectationFailed, "can not get on-call engineer")
+		fmt.Println("Error marshalling JSON:", err)
 	}
+	jsonString := string(jsonData)
 
-	if schedule != nil {
-		incident.AssignedTo = append(incident.AssignedTo, schedule.User)
-	}
-
+	// start populating the incident with main details
 	code, err := utils.GenerateRandomCode(6)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-
 	incident.Id = code
+	incident.Metadata = jsonString
+	incident.TeamId = user.TeamId
+	incident.Resolved = false
+	incident.Timeline = append(incident.Timeline, Timepoint{
+		Title:     "Incident Created",
+		CreatedAt: time.Now(),
+		Metadata:  jsonString,
+	})
 	var text string
 	var severity string
 	switch incident.Severity {
@@ -101,10 +88,27 @@ func CreateIncident(c *fiber.Ctx) error {
 	default:
 		severity = "Unknown"
 	}
+
+	// check who is on-call
+	schedule, err := schedules.Scheduled(time.Now(), user.TeamId)
+	if err != nil {
+		log.Println(err)
+		return fiber.NewError(fiber.StatusExpectationFailed, "can not get on-call engineer")
+	}
+
+	var scheduledUser auth.User
+	if schedule != nil {
+		err := database.FindOne("users", bson.M{"email": schedule.User.Email}).Decode(&scheduledUser)
+		if err != nil {
+			return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+		}
+		incident.AssignedTo = append(incident.AssignedTo, scheduledUser)
+	}
+
 	if len(incident.AssignedTo) > 0 {
 		assignedToNames := make([]string, len(incident.AssignedTo))
 		for i, user := range incident.AssignedTo {
-			assignedToNames[i] = fmt.Sprintf("%s %s <%s>", user.FirstName, user.LastName, user.SlackHandle)
+			assignedToNames[i] = fmt.Sprintf("%s <%s>", user.Name, user.GithubHandle)
 		}
 		assignedToList := strings.Join(assignedToNames, ", ")
 		data := map[string]interface{}{
@@ -118,9 +122,7 @@ func CreateIncident(c *fiber.Ctx) error {
 		}
 
 		jsonString := string(jsonData)
-
 		incident.Metadata = jsonString
-
 		incident.Timeline = append(incident.Timeline, Timepoint{
 			Title:     "Incident Assigned",
 			CreatedAt: time.Now(),
@@ -136,7 +138,7 @@ func CreateIncident(c *fiber.Ctx) error {
 	}
 
 	data = map[string]interface{}{
-		"createdby": team.Name,
+		"createdby": user.Name,
 		"subtext":   fmt.Sprint("Alert sent to everyone on-call and slack"),
 	}
 
@@ -158,6 +160,13 @@ func CreateIncident(c *fiber.Ctx) error {
 	if err != nil {
 		log.Println(err)
 		return fiber.NewError(fiber.StatusExpectationFailed, "incident not created")
+	}
+
+	if len(incident.AssignedTo) > 0 {
+		for _, user := range incident.AssignedTo {
+			// assignedToNames[i] = fmt.Sprintf("%s <%s>", user.Name, user.GithubHandle)
+			notification.SendNotification(fmt.Sprintf("You have been assigned to: \nIncident #%s\nTitle: %s\nDescription: %s\nSeverity: %s", incident.Id, incident.Title, incident.Description, incident.Severity), user)
+		}
 	}
 
 	return c.Status(200).JSON(fiber.Map{
@@ -354,7 +363,7 @@ func AssignUser(c *fiber.Ctx) error {
 	incidentCode := c.Params("incidentId")
 	userId := c.Params("userId")
 
-	var user users.User
+	var user auth.User
 	err := database.FindOne("users", bson.M{"code": userId}).Decode(&user)
 	if err != nil && err != mongo.ErrNoDocuments {
 		log.Println(err)
@@ -585,15 +594,15 @@ func Assign(incidentId string, params *AssignParams) (*Incident, error) {
 		return nil, err
 	}
 
-	if incident.AssignedTo[0].FirstName == "" {
+	if incident.AssignedTo[0].Name == "" {
 		return nil, errors.New("no users found")
 	}
 
-	if err := slack.Notify(&slack.NotifyParams{
-		Text: fmt.Sprintf("Incident #%s is now assigned to %s %s [@%s]\n%s", incident.Id, incident.AssignedTo[0].FirstName, incident.AssignedTo[0].LastName, incident.AssignedTo[0].SlackHandle, incident.Title),
-	}); err != nil {
-		// Log error or handle it appropriately
-		fmt.Println("Error sending Slack notification:", err)
+	if len(incident.AssignedTo) > 0 {
+		for _, user := range incident.AssignedTo {
+			// assignedToNames[i] = fmt.Sprintf("%s <%s>", user.Name, user.GithubHandle)
+			notification.SendNotification(fmt.Sprintf("You have been assigned to: \nIncident #%s\nTitle: %s\nDescription: %s\nSeverity: %s", incident.Id, incident.Title, incident.Description, incident.Severity), user)
+		}
 	}
 
 	return &incident, nil

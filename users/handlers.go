@@ -14,7 +14,7 @@ import (
 
 func GetUser(c *fiber.Ctx) error {
 	userCode := c.Params("userCode")
-	var user User
+	var user auth.User
 	err := database.FindOne("users", bson.M{"code": userCode}).Decode(&user)
 	if err != nil && err != mongo.ErrNoDocuments {
 		log.Println(err)
@@ -40,16 +40,16 @@ func GetUsers(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
 	}
 
-	filter := bson.M{"team": team.TeamId}
+	filter := bson.M{"teamId": team.TeamId}
 	cursor, err := database.Find("users", filter)
 	if err != nil {
 		return fmt.Errorf("error finding users: %v", err)
 	}
 	defer cursor.Close(ctx)
 
-	var users []User
+	var users []auth.User
 	for cursor.Next(ctx) {
-		var user User
+		var user auth.User
 		if err := cursor.Decode(&user); err != nil {
 			return fmt.Errorf("error decoding user: %v", err)
 		}
@@ -62,6 +62,41 @@ func GetUsers(c *fiber.Ctx) error {
 	})
 }
 
+func GetCurrentUser(c *fiber.Ctx) error {
+	email := c.Locals("email").(string)
+	var user auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"message": "users data",
+		"user":    &user,
+	})
+}
+
+func GetTeam(c *fiber.Ctx) error {
+	email := c.Locals("email").(string)
+	log.Println(email)
+	var user auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+	}
+
+	var team auth.Team
+	err = database.FindOne("teams", bson.M{"teamId": user.TeamId}).Decode(&team)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"message": "teams data",
+		"team":    &team,
+	})
+}
+
 func UpdateUser(c *fiber.Ctx) error {
 	var userUpdate map[string]interface{}
 	if err := c.BodyParser(&userUpdate); err != nil {
@@ -69,21 +104,30 @@ func UpdateUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	userCode := c.Params("userCode")
+	email := c.Locals("email").(string)
+	log.Println(email)
+	var user auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+	}
 
-	filter := bson.M{"code": userCode}
+	filter := bson.M{"code": user.Code}
 
 	var update bson.M
 	if len(userUpdate) > 0 {
-		delete(userUpdate, "team")
+		delete(userUpdate, "teamId")
 		delete(userUpdate, "code")
+		delete(userUpdate, "password")
+		delete(userUpdate, "id")
+		delete(userUpdate, "_id")
+		delete(userUpdate, "role")
 		update = bson.M{"$set": userUpdate}
 	} else {
 		return fiber.NewError(fiber.StatusBadRequest, "No fields provided for update")
 	}
 
-	var user User
-	err := database.FindOneAndUpdate("users", filter, update).Decode(&user)
+	err = database.FindOneAndUpdate("users", filter, update).Decode(&user)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return err
@@ -96,7 +140,7 @@ func UpdateUser(c *fiber.Ctx) error {
 }
 
 func AssignRole(c *fiber.Ctx) error {
-	var userUpdate []Role
+	var userUpdate []auth.Role
 	if err := c.BodyParser(&userUpdate); err != nil {
 		log.Println(err)
 		return err
@@ -115,7 +159,7 @@ func AssignRole(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "No fields provided for update")
 	}
 
-	var user User
+	var user auth.User
 	err := database.FindOneAndUpdate("users", filter, update).Decode(&user)
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -130,7 +174,7 @@ func AssignRole(c *fiber.Ctx) error {
 
 func DeleteUser(c *fiber.Ctx) error {
 	userCode := c.Params("userCode")
-	var user User
+	var user auth.User
 	err := database.FindOne("users", bson.M{"code": userCode}).Decode(&user)
 	if err != nil && err != mongo.ErrNoDocuments {
 		log.Println(err)

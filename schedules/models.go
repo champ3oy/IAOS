@@ -1,7 +1,7 @@
 package schedules
 
 import (
-	"issue-reporting/users"
+	"issue-reporting/auth"
 	"time"
 )
 
@@ -10,7 +10,7 @@ type Schedules struct {
 }
 
 type Schedule struct {
-	User users.User
+	User auth.User
 	Time TimeRange
 }
 

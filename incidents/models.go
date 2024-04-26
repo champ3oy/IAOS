@@ -1,29 +1,29 @@
 package incidents
 
 import (
-	"issue-reporting/users"
+	"issue-reporting/auth"
 	"time"
 )
 
 type Incident struct {
-	Id             string       `json:"id"`
-	Title          string       `json:"title"`
-	Description    string       `json:"description"`
-	Severity       Severity     `json:"severity"`
-	Status         Status       `json:"status"`
-	AssignedTo     []users.User `json:"assigned_to"`
-	CreatedAt      time.Time    `json:"created_at"`
-	TeamId         string       `json:"teamId"`
-	UpdatedAt      time.Time    `json:"updated_at"`
-	Resolved       bool         `json:"resolved"`
-	ResolvedAt     time.Time    `json:"resolved_at"`
-	Acknowledged   bool         `json:"acknowledged"`
-	AcknowledgedAt time.Time    `json:"acknowledged_at"`
-	Actions        []string     `json:"actions"`
-	FollowUps      []string     `json:"followUps"`
-	Timeline       []Timepoint  `json:"timeline"`
-	Metadata       string       `json:"metadata"`
-	ReportCreated  bool         `json:"reportCreated"`
+	Id             string      `json:"id"`
+	Title          string      `json:"title"`
+	Description    string      `json:"description"`
+	Severity       Severity    `json:"severity"`
+	Status         Status      `json:"status"`
+	AssignedTo     []auth.User `json:"assigned_to"`
+	CreatedAt      time.Time   `json:"created_at"`
+	TeamId         string      `json:"teamId"`
+	UpdatedAt      time.Time   `json:"updated_at"`
+	Resolved       bool        `json:"resolved"`
+	ResolvedAt     time.Time   `json:"resolved_at"`
+	Acknowledged   bool        `json:"acknowledged"`
+	AcknowledgedAt time.Time   `json:"acknowledged_at"`
+	Actions        []string    `json:"actions"`
+	FollowUps      []string    `json:"followUps"`
+	Timeline       []Timepoint `json:"timeline"`
+	Metadata       string      `json:"metadata"`
+	ReportCreated  bool        `json:"reportCreated"`
 }
 
 type Incidents struct {
@@ -52,5 +52,5 @@ const (
 )
 
 type AssignParams struct {
-	User users.User
+	User auth.User
 }

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"issue-reporting/database"
 	"issue-reporting/middleware"
 	"issue-reporting/utils"
@@ -20,6 +21,9 @@ func RegisterAuthRoutes(app *fiber.App) {
 	authRoutes.Post("/join", JoinTeam)
 	authRoutes.Post("/login", Login)
 	authRoutes.Post("/refresh", Refresh)
+
+	teamRoutes := app.Group("/team").Use(middleware.AuthMiddleware())
+	teamRoutes.Put("/", UpdateTeam)
 }
 
 func Register(c *fiber.Ctx) error {
@@ -50,6 +54,10 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	// generate unique codes
+	code, err := utils.GenerateRandomCode(8)
+	if err != nil {
+		return err
+	}
 	teamId, err := utils.GenerateRandomCode(18)
 	if err != nil {
 		return err
@@ -73,6 +81,7 @@ func Register(c *fiber.Ctx) error {
 	user.Email = body.Email
 	user.Password = string(hashedPassword)
 	user.TeamId = teamId
+	user.Code = code
 
 	// create team for user
 	var team Team
@@ -99,6 +108,36 @@ func Register(c *fiber.Ctx) error {
 			"userId": insertedID1,
 			"teamId": insertedID,
 		},
+	})
+}
+
+func UpdateTeam(c *fiber.Ctx) error {
+	var teamUpdate []Notification
+	if err := c.BodyParser(&teamUpdate); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	email := c.Locals("email").(string)
+	var user User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+	}
+
+	filter := bson.M{"teamId": user.TeamId}
+	update := bson.M{"$set": bson.M{"notifications": teamUpdate}}
+
+	var team Team
+	err = database.FindOneAndUpdate("teams", filter, update).Decode(&team)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "team data updated",
+		"team":    &team,
 	})
 }
 
@@ -187,7 +226,6 @@ func Login(c *fiber.Ctx) error {
 		"message": "login successfull",
 		"token":   token,
 	})
-
 }
 
 var secretKey = []byte("your-secret-key")

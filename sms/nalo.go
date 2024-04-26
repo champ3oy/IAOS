@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -14,14 +15,24 @@ type SMSParams struct {
 	Message    string
 }
 
+// func encodeAPIKey(apiKey string) string {
+// 	// Encode the API key
+// 	encodedKey := url.QueryEscape(apiKey)
+// 	// Replace any special characters that are not encoded by url.QueryEscape
+// 	encodedKey = strings.ReplaceAll(encodedKey, "@", "%40")
+// 	// You might need to replace other characters based on your API key's format
+
+// 	return encodedKey
+// }
+
 func SendWithNalo(payload SMSParams) error {
 	phoneNumber := payload.Recipients
 	phoneNumberWithoutPlus := strings.ReplaceAll(phoneNumber, "+", "")
 
 	log.Println(phoneNumberWithoutPlus, payload.Message)
 
-	key := "3p7pah73@4fkwei7bod@4xjkbanz_6bj14u)@r17zr_u(0ge@0jx(ntg8uuhukox"
-	apiURL := "https://sms.nalosolutions.com/smsbackend/clientapi/Resl_Nalo/send-message/"
+	key := os.Getenv("NALO_API")
+	apiURL := "https://sms.nalosolutions.com/smsbackend/Resl_Nalo/send-message/"
 
 	params := url.Values{}
 	params.Set("key", key)
@@ -52,6 +63,6 @@ func SendWithNalo(payload SMSParams) error {
 	}
 
 	defer res.Body.Close()
-
+	log.Println("nalo response", req.Body)
 	return nil
 }

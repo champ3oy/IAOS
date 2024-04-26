@@ -1,8 +1,6 @@
 package auth
 
 import (
-	"time"
-
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -21,12 +19,29 @@ type JoinTeamBody struct {
 }
 
 type User struct {
-	ID       primitive.ObjectID `bson:"_id,omitempty"`
-	Name     string             `bson:"name"`
-	Email    string             `bson:"email"`
-	Password string             `bson:"password"`
-	TeamId   string             `bson:"teamId"`
+	ID                     primitive.ObjectID `bson:"_id,omitempty"`
+	Name                   string             `bson:"name"`
+	Email                  string             `bson:"email"`
+	Password               string             `bson:"password"`
+	TeamId                 string             `bson:"teamId"`
+	SlackHandle            string             `bson:"slackHandle"`
+	GithubHandle           string             `bson:"githubHandle"`
+	PhoneNumber            string             `bson:"phoneNumber"`
+	WhatsappNumber         string             `bson:"whatsappNumber"`
+	PushToken              string             `bson:"pushToken"`
+	Role                   []Role             `bson:"role"`
+	Code                   string             `bson:"code"`
+	NotificationType       string             `bson:"notificationType"`
+	AcceptPushNotification bool               `bson:"acceptPushNotification"`
 }
+
+type Role string
+
+const (
+	Engineer Role = "Engineer"
+	Lead     Role = "Lead"
+	Admin    Role = "Admin"
+)
 
 type Team struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty"`
@@ -37,9 +52,8 @@ type Team struct {
 }
 
 type Notification struct {
-	Channel       Channel       `bson:"channel"`
-	Priority      int           `bson:"priority"`
-	TimeToTrigger time.Duration `bson:"timeToTrigger"`
+	Channel Channel `bson:"channel"`
+	Use     bool    `bson:"use"`
 }
 
 type Channel string
@@ -49,5 +63,6 @@ const (
 	Slack            Channel = "Slack"
 	Email            Channel = "Email"
 	Call             Channel = "Call"
+	Whatsapp         Channel = "Whatsapp"
 	PushNotification Channel = "PushNotification"
 )

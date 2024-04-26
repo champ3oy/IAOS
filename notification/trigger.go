@@ -4,53 +4,66 @@ import (
 	"fmt"
 	"issue-reporting/auth"
 	"issue-reporting/call"
+	"issue-reporting/database"
 	"issue-reporting/email"
 	pushnotification "issue-reporting/push-notification"
-	"issue-reporting/schedules"
 	"issue-reporting/slack"
 	"issue-reporting/sms"
 	"log"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
-func SendNotification(message string, team auth.Team) {
+func SendNotification(message string, user auth.User) {
 	done := make(chan bool)
 	start := time.Now()
 
-	schedule, err := schedules.ScheduledNow()
+	var team auth.Team
+	err := database.FindOne("teams", bson.M{"teamId": user.TeamId}).Decode(&team)
 	if err != nil {
-		log.Printf("Error getting schedule: %v", err)
+		fmt.Println("error find team")
 	}
 
 	for _, notification := range team.Notifications {
 		go func(notification auth.Notification) {
-			<-time.After(notification.TimeToTrigger)
-
 			switch notification.Channel {
 			case "SMS":
-				p := sms.SMSParams{
-					Recipients: schedule.User.PhoneNumber,
-					Message:    message,
+				if notification.Use {
+					p := sms.SMSParams{
+						Recipients: user.PhoneNumber,
+						Message:    message,
+					}
+					sms.SendWithNalo(p)
 				}
-				sms.SendWithNalo(p)
 			case "Slack":
-				_ = slack.Notify(&slack.NotifyParams{Text: message})
+				if notification.Use {
+					_ = slack.Notify(&slack.NotifyParams{Text: message})
+				}
 			case "Email":
-				email.SendWithResend(email.EmailParams{
-					// Recipients: team.Email,
-					Subject: "Incident Report Alert 🆘🚨",
-					Message: message,
-				})
+				if notification.Use {
+					email.SendWithResend(email.EmailParams{
+						Recipients: user.Email,
+						Subject:    "Incident Report Alert 🆘🚨",
+						Message:    message,
+					})
+				} else {
+					log.Println("Email was off")
+				}
 			case "Push notification":
-				pushnotification.SendPushNotification(&pushnotification.PushParams{
-					Title: "Incident Report Alert 🆘🚨",
-					Body:  message,
-					Type:  "incident",
-				})
+				if notification.Use {
+					pushnotification.SendPushNotification(&pushnotification.PushParams{
+						Title: "Incident Report Alert 🆘🚨",
+						Body:  message,
+						Type:  "incident",
+					})
+				}
 			case "Call":
-				call.MakeCall(schedule.User.PhoneNumber, "Incident Report Alert"+message)
+				if notification.Use {
+					call.MakeCall(user.PhoneNumber, "Incident Report Alert "+message)
+				}
 			default:
-				fmt.Println("Unknown notification method:", notification.Channel)
+				fmt.Println("Unknown notification method: ", notification.Channel)
 			}
 
 			done <- true
@@ -62,9 +75,4 @@ func SendNotification(message string, team auth.Team) {
 	}
 
 	fmt.Println("Total time taken:", time.Since(start))
-
-}
-
-func sendPushNotification(message string) {
-	fmt.Println("Sending Push notification:", message)
 }
