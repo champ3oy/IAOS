@@ -35,7 +35,7 @@ func main() {
 	app := fiber.New()
 	app.Use(recover.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000, http://localhost:3001, https://6631121ada053c0008d3877c--roaring-biscotti-b91532.netlify.app/auth",
+		AllowOrigins:     "http://localhost:3000, http://localhost:3001, https://6631121ada053c0008d3877c--roaring-biscotti-b91532.netlify.app",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowCredentials: true,
 	}))
