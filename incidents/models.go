@@ -54,3 +54,14 @@ const (
 type AssignParams struct {
 	User auth.User
 }
+
+type Log struct {
+	Id          string    `json:"id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	TeamId      string    `json:"teamId"`
+	Metadata    string    `json:"metadata"`
+	Slug        string    `json:"slug"`
+	App         string    `json:"app"`
+}

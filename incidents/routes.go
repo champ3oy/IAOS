@@ -17,4 +17,7 @@ func RegisterRoutes(app *fiber.App) {
 	incidents.Get("/acknowledges", AcknowledgeAll)
 	incidents.Get("/acknowledge/:incidentId", Acknowledge)
 	incidents.Get("/resolve/:incidentId", Resolve)
+
+	logRoutes := app.Group("/log").Use(middleware.AuthMiddleware())
+	logRoutes.Get("/", GetLogs)
 }

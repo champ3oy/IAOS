@@ -1,6 +1,7 @@
 package main
 
 import (
+	"issue-reporting/api"
 	"issue-reporting/auth"
 	"issue-reporting/cron"
 	"issue-reporting/database"
@@ -34,7 +35,7 @@ func main() {
 	app := fiber.New()
 	app.Use(recover.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3001",
+		AllowOrigins:     "http://localhost:3000, http://localhost:3001, https://6631121ada053c0008d3877c--roaring-biscotti-b91532.netlify.app/auth",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowCredentials: true,
 	}))
@@ -49,6 +50,7 @@ func main() {
 	users.RegisterRoutes(app)
 	schedules.RegisterRoutes(app)
 	reports.RegisterRoutes(app)
+	api.RegisterRoutes(app)
 
 	app.Listen(":" + port)
 }

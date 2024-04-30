@@ -607,3 +607,55 @@ func Assign(incidentId string, params *AssignParams) (*Incident, error) {
 
 	return &incident, nil
 }
+
+func GetLogs(c *fiber.Ctx) error {
+	ctx := context.Background()
+	email := c.Locals("email").(string)
+	var team auth.User
+	err := database.FindOne("users", bson.M{"email": email}).Decode(&team)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+	}
+
+	// Pagination parameters
+	page := 1      // default page number
+	pageSize := 10 // default page size
+
+	if pageStr := c.Query("page"); pageStr != "" {
+		page, _ = strconv.Atoi(pageStr)
+	}
+	if pageSizeStr := c.Query("pageSize"); pageSizeStr != "" {
+		pageSize, _ = strconv.Atoi(pageSizeStr)
+	}
+
+	// MongoDB filter
+	filter := bson.M{"teamid": team.TeamId}
+
+	// MongoDB options for sorting
+	sortOptions := options.Find().SetSort(bson.D{{Key: "_id", Value: -1}}) // Sort by _id field in descending order
+
+	// MongoDB options for pagination
+	paginationOptions := options.Find().
+		SetSkip(int64((page - 1) * pageSize)).
+		SetLimit(int64(pageSize))
+
+	cursor, err := database.GetDatabase().Database("IssueReporting").Collection("logs").Find(ctx, filter, sortOptions, paginationOptions)
+	if err != nil {
+		return fmt.Errorf("error finding logs: %v", err)
+	}
+	defer cursor.Close(ctx)
+
+	var logs []Log
+	for cursor.Next(ctx) {
+		var log Log
+		if err := cursor.Decode(&log); err != nil {
+			return fmt.Errorf("error decoding log: %v", err)
+		}
+		logs = append(logs, log)
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"message": "logs data",
+		"logs":    logs,
+	})
+}
