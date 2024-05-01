@@ -35,10 +35,9 @@ func main() {
 	app := fiber.New()
 	app.Use(recover.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "*",
-		AllowHeaders:     "*",
-		AllowCredentials: true,
-		AllowMethods:     "*",
+		AllowOrigins: "*",
+		AllowHeaders: "*",
+		AllowMethods: "*",
 	}))
 	app.Use(logger.New(logger.Config{
 		Format:     "${cyan}[${time}] ${red}[${ip}] ${magenta}${bytesSent}bytes ${green}${latency} ${blue}${method} ${blue}${status} ${white}${path}\n",
