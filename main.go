@@ -35,9 +35,10 @@ func main() {
 	app := fiber.New()
 	app.Use(recover.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowHeaders: "*",
-		AllowMethods: "*",
+		AllowOrigins:     "https://roaring-biscotti-b91532.netlify.app, http://localhost:3000, http://localhost:3001",
+		AllowHeaders:     "*",
+		AllowMethods:     "*",
+		AllowCredentials: true,
 	}))
 	app.Use(logger.New(logger.Config{
 		Format:     "${cyan}[${time}] ${red}[${ip}] ${magenta}${bytesSent}bytes ${green}${latency} ${blue}${method} ${blue}${status} ${white}${path}\n",
