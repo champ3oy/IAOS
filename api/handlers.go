@@ -88,14 +88,20 @@ func CreateIncident(c *fiber.Ctx) error {
 	schedule, err := schedules.Scheduled(time.Now(), team.TeamId)
 	if err != nil {
 		log.Println(err)
-		return fiber.NewError(fiber.StatusExpectationFailed, "can not get on-call engineer")
+		return c.Status(fiber.StatusExpectationFailed).JSON(fiber.Map{
+			"message": "can not get on-call engineer",
+			"status":  false,
+		})
 	}
 
 	var scheduledUser auth.User
 	if schedule != nil {
 		err := database.FindOne("users", bson.M{"email": schedule.User.Email}).Decode(&scheduledUser)
 		if err != nil {
-			return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"message": "Invalid credentials",
+				"status":  false,
+			})
 		}
 		incident.AssignedTo = append(incident.AssignedTo, scheduledUser)
 	}
@@ -154,7 +160,10 @@ func CreateIncident(c *fiber.Ctx) error {
 	_, err = database.InsertOne("incidents", incident)
 	if err != nil {
 		log.Println(err)
-		return fiber.NewError(fiber.StatusExpectationFailed, "incident not created")
+		return c.Status(fiber.StatusExpectationFailed).JSON(fiber.Map{
+			"message": "incident not created",
+			"status":  false,
+		})
 	}
 
 	if len(incident.AssignedTo) > 0 {
@@ -202,7 +211,10 @@ func CreateLog(c *fiber.Ctx) error {
 	_, err = database.InsertOne("logs", logx)
 	if err != nil {
 		log.Println(err)
-		return fiber.NewError(fiber.StatusExpectationFailed, "incident not created")
+		return c.Status(fiber.StatusExpectationFailed).JSON(fiber.Map{
+			"message": "log not created",
+			"status":  false,
+		})
 	}
 
 	return c.Status(200).JSON(fiber.Map{

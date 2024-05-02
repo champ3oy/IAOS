@@ -29,7 +29,8 @@ func CreateIncident(c *fiber.Ctx) error {
 	var user auth.User
 	err := database.FindOne("users", bson.M{"email": email}).Decode(&user)
 	if err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized", "message": "Invalid Credentials"})
+
 	}
 
 	// initiate an incident template
@@ -93,14 +94,18 @@ func CreateIncident(c *fiber.Ctx) error {
 	schedule, err := schedules.Scheduled(time.Now(), user.TeamId)
 	if err != nil {
 		log.Println(err)
-		return fiber.NewError(fiber.StatusExpectationFailed, "can not get on-call engineer")
+		return c.Status(fiber.StatusExpectationFailed).JSON(fiber.Map{
+			"message": "can not get on-call engineer",
+			"status":  false,
+		})
 	}
 
 	var scheduledUser auth.User
 	if schedule != nil {
 		err := database.FindOne("users", bson.M{"email": schedule.User.Email}).Decode(&scheduledUser)
 		if err != nil {
-			return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized", "message": "Invalid Credentials"})
+
 		}
 		incident.AssignedTo = append(incident.AssignedTo, scheduledUser)
 	}
@@ -159,7 +164,10 @@ func CreateIncident(c *fiber.Ctx) error {
 	_, err = database.InsertOne("incidents", incident)
 	if err != nil {
 		log.Println(err)
-		return fiber.NewError(fiber.StatusExpectationFailed, "incident not created")
+		return c.Status(fiber.StatusExpectationFailed).JSON(fiber.Map{
+			"message": "incident not created",
+			"status":  false,
+		})
 	}
 
 	if len(incident.AssignedTo) > 0 {
@@ -182,11 +190,17 @@ func GetIncident(c *fiber.Ctx) error {
 	err := database.FindOne("incidents", bson.M{"id": id}).Decode(&incident)
 	if err != nil && err != mongo.ErrNoDocuments {
 		log.Println(err)
-		return fiber.NewError(fiber.StatusExpectationFailed, "Something went wrong")
+		return c.Status(fiber.StatusExpectationFailed).JSON(fiber.Map{
+			"message": "Something went wrong",
+			"status":  false,
+		})
 	}
 	if err == mongo.ErrNoDocuments {
 		log.Println(err)
-		return fiber.NewError(fiber.StatusNoContent, "No incidents found")
+		return c.Status(fiber.StatusNoContent).JSON(fiber.Map{
+			"message": "No incidents found",
+			"status":  false,
+		})
 	}
 
 	return c.Status(200).JSON(fiber.Map{
@@ -232,7 +246,8 @@ func GetIncidents(c *fiber.Ctx) error {
 	var team auth.User
 	err := database.FindOne("users", bson.M{"email": email}).Decode(&team)
 	if err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "Invalid credentials")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized", "message": "Invalid API key"})
+
 	}
 
 	// Pagination parameters
@@ -263,7 +278,8 @@ func GetIncidents(c *fiber.Ctx) error {
 
 	cursor, err := database.GetDatabase().Database("IssueReporting").Collection("incidents").Find(ctx, filter, sortOptions, paginationOptions)
 	if err != nil {
-		return fmt.Errorf("error finding incidents: %v", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Unauthorized", "message": "error finding incidents"})
+
 	}
 	defer cursor.Close(ctx)
 
