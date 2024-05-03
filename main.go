@@ -28,8 +28,8 @@ func main() {
 	}
 
 	cron.StartNotifyAssignScheduler()
-	cron.ReportGeneratorScheduler()
-	cron.StartNotifyAcknowlegedScheduler()
+	// cron.ReportGeneratorScheduler()
+	// cron.StartNotifyAcknowlegedScheduler()
 
 	port := os.Getenv("PORT")
 	app := fiber.New()
